@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-blue: #2563EB;
+  --color-brand-purple: #7C3AED;
+  --color-brand-red: #EF4444;
+  --color-brand-dark: #161B2B;  /* Sidebar dark */
+  --color-brand-darker: #0F172A; /* Login back */
+  --color-brand-bg: #F8FAFC;
+}
+
+@layer base {
+  :root {
+    --background: #F8FAFC;
+    --foreground: #0F172A;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    @apply antialiased font-sans;
+  }
+}
+
+@layer components {
+  /* Common inputs */
+  .input-field {
+    @apply w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow text-sm text-slate-800;
+  }
+  
+  /* Primary buttons */
+  .btn-primary {
+    @apply w-full bg-[#2563EB] text-white font-medium py-3 rounded-lg hover:bg-blue-600 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  }
+}
+
+@layer utilities {
+  .login-bg {
+    background-color: #0f172a;
+    background-image: radial-gradient(circle at top left, rgba(30, 64, 175, 0.4) 0%, transparent 50%),
+                      radial-gradient(circle at bottom right, rgba(30, 58, 138, 0.4) 0%, transparent 50%);
+  }
+
+  .register-bg {
+    background-color: #0f172a;
+    background-image: radial-gradient(circle at top left, rgba(29, 53, 87, 0.5) 0%, transparent 40%),
+                      radial-gradient(circle at top right, rgba(37, 99, 235, 0.4) 0%, transparent 50%),
+                      radial-gradient(circle at bottom right, rgba(30, 58, 138, 0.4) 0%, transparent 50%);
+  }
+}
