@@ -1,47 +1,107 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ThumbsUp, MessageSquare, Medal, Pin, MessageCircle, X } from 'lucide-react';
+import { useForumStore } from '@/store/useForumStore';
+import { useCourseStore } from '@/store/useCourseStore';
+import { useUserStore } from '@/store/useUserStore';
+import api from '@/lib/api';
 
 export default function DiscussionForum() {
+  const { createPost } = useForumStore();
+  const { myEnrollments, fetchMyEnrollments } = useCourseStore();
+  const { user, initializeUser } = useUserStore();
+  
   const [activeTab, setActiveTab] = useState('All Posts');
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const posts = [
-    {
-      id: 1,
-      author: 'Kavitha Perera',
-      initial: 'K',
-      time: '2 hours ago',
-      title: 'How does merge sort handle duplicate values?',
-      excerpt: "I'm confused about how duplicate values are handled during the merge step. Can someone cla...",
-      likes: 12,
-      replies: 3,
-      color: 'bg-blue-600'
-    },
-    {
-      id: 2,
-      author: 'Nimal Silva',
-      initial: 'N',
-      time: '5 hours ago',
-      title: 'Resource: Quick Sort visual animation tool — must see!',
-      excerpt: "Found this amazing visual tool for understanding quick sort partitioning. Link: visualalgo...",
-      likes: 28,
-      replies: 7,
-      color: 'bg-emerald-500'
-    },
-    {
-      id: 3,
-      author: 'Suresh Bandara',
-      initial: 'S',
-      time: '1 day ago',
-      title: 'Confused about 3NF vs BCNF — when to use which?',
-      excerpt: "Can anyone explain the practical difference between 3NF and BCNF? The textbook definition ...",
-      likes: 9,
-      replies: 5,
-      color: 'bg-purple-500'
+  // New Post State
+  const [newPostTitle, setNewPostTitle] = useState('');
+  const [newPostContent, setNewPostContent] = useState('');
+  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [submittingPost, setSubmittingPost] = useState(false);
+
+  useEffect(() => {
+    initializeUser();
+    fetchMyEnrollments();
+  }, [fetchMyEnrollments, initializeUser]);
+
+  const fetchAllPosts = async () => {
+    setLoading(true);
+    try {
+      let agg: any[] = [];
+      for (const enrollment of myEnrollments) {
+         const courseId = enrollment.course._id || enrollment.course;
+         // Note: Ideally useForumStore.fetchPostsByCourse would update the global state,
+         // but since we want an aggregated feed, we can fetch them per enrolled course directly
+         // or rely on store state. We will fetch here to aggregate easily.
+         const res = await api.get(`/forums/course/${courseId}`);
+         
+         const mapped = res.data.map((p: any) => ({
+           ...p,
+           courseName: enrollment.course.title || 'Unknown Course'
+         }));
+         agg = [...agg, ...mapped];
+      }
+      
+      // Sort by newest
+      agg.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setPosts(agg);
+    } catch (err) {
+      console.error("Failed to load forum posts", err);
     }
-  ];
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (myEnrollments.length > 0) {
+      fetchAllPosts();
+      if (!selectedCourseId) {
+         const firstCourseId = myEnrollments[0].course._id || myEnrollments[0].course;
+         setSelectedCourseId(firstCourseId as string);
+      }
+    } else {
+       setLoading(false);
+    }
+  }, [myEnrollments]);
+
+  const handleCreatePost = async (e: React.FormEvent) => {
+     e.preventDefault();
+     if (!newPostTitle || !newPostContent || !selectedCourseId) return;
+
+     setSubmittingPost(true);
+     try {
+       await createPost({
+          course: selectedCourseId,
+          title: newPostTitle,
+          content: newPostContent
+       });
+       setIsPostModalOpen(false);
+       setNewPostTitle('');
+       setNewPostContent('');
+       await fetchAllPosts(); // Refresh aggregated feed
+     } catch (err) {
+       console.error("Failed to create post", err);
+       alert("Failed to create post.");
+     }
+     setSubmittingPost(false);
+  };
+
+  // Filter Active Tab
+  const displayPosts = activeTab === 'My Posts' 
+   ? posts.filter(p => (p.author?._id === user?._id) || (p.author === user?._id))
+   : posts;
+
+  // Fallback avatars/colors based on ID string
+  const getAvatarColor = (idStr: string) => {
+     const colors = ['bg-blue-600', 'bg-emerald-500', 'bg-purple-500', 'bg-orange-500', 'bg-pink-500'];
+     if (!idStr) return colors[0];
+     let hash = 0;
+     for (let i = 0; i < idStr.length; i++) { hash = idStr.charCodeAt(i) + ((hash << 5) - hash); }
+     return colors[Math.abs(hash) % colors.length];
+  };
 
   return (
     <div className="space-y-6">
@@ -73,32 +133,47 @@ export default function DiscussionForum() {
          
          {/* Posts Feed */}
          <div className="lg:col-span-2 space-y-4">
-            {posts.map(post => (
-               <div key={post.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                  <div className="flex items-center gap-3 mb-3">
-                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${post.color}`}>
-                        {post.initial}
-                     </div>
-                     <div className="flex items-center gap-2 text-sm">
-                        <span className="font-medium text-slate-800">{post.author}</span>
-                        <span className="text-slate-400">·</span>
-                        <span className="text-slate-400">{post.time}</span>
-                     </div>
-                  </div>
+            {loading ? (
+               <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
+            ) : displayPosts.length === 0 ? (
+               <div className="text-center py-12 bg-white border border-slate-200 rounded-2xl text-slate-500">No discussion posts found.</div>
+            ) : (
+               displayPosts.map((post) => {
+                  const authorName = post.author?.name || 'Anonymous';
+                  const initial = authorName.charAt(0).toUpperCase();
+                  const time = new Date(post.createdAt).toLocaleDateString();
                   
-                  <h3 className="text-lg font-medium text-slate-800 mb-2">{post.title}</h3>
-                  <p className="text-sm text-slate-500 mb-4">{post.excerpt}</p>
-                  
-                  <div className="flex items-center gap-6">
-                     <button className="flex items-center gap-1.5 text-slate-400 hover:text-yellow-500 transition text-sm font-medium">
-                        <ThumbsUp className="w-4 h-4" /> {post.likes}
-                     </button>
-                     <button className="flex items-center gap-1.5 text-blue-500 hover:text-blue-600 transition text-sm font-medium">
-                        <MessageSquare className="w-4 h-4" /> {post.replies} replies
-                     </button>
-                  </div>
-               </div>
-            ))}
+                  return (
+                     <div key={post._id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                        <div className="flex items-center gap-3 mb-3">
+                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${getAvatarColor(post.author?._id || '1')}`}>
+                              {initial}
+                           </div>
+                           <div className="flex flex-col">
+                              <div className="flex items-center gap-2 text-sm">
+                                 <span className="font-medium text-slate-800">{authorName}</span>
+                                 <span className="text-slate-400">·</span>
+                                 <span className="text-slate-400">{time}</span>
+                              </div>
+                              <span className="text-xs text-blue-500 font-medium">#{post.courseName}</span>
+                           </div>
+                        </div>
+                        
+                        <h3 className="text-lg font-medium text-slate-800 mb-2">{post.title}</h3>
+                        <p className="text-sm text-slate-500 mb-4 whitespace-pre-wrap">{post.content}</p>
+                        
+                        <div className="flex items-center gap-6">
+                           <button className="flex items-center gap-1.5 text-slate-400 hover:text-yellow-500 transition text-sm font-medium">
+                              <ThumbsUp className="w-4 h-4" /> Like
+                           </button>
+                           <button className="flex items-center gap-1.5 text-blue-500 hover:text-blue-600 transition text-sm font-medium">
+                              <MessageSquare className="w-4 h-4" /> {post.replies?.length || 0} replies
+                           </button>
+                        </div>
+                     </div>
+                  )
+               })
+            )}
          </div>
 
          {/* Right Sidebar */}
@@ -110,19 +185,11 @@ export default function DiscussionForum() {
                <div className="space-y-4">
                   <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
                      <span className="text-slate-600">Posts made</span>
-                     <span className="font-medium text-blue-600">7</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                     <span className="text-slate-600">Replies given</span>
-                     <span className="font-medium text-blue-600">23</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                     <span className="text-slate-600">Likes received</span>
-                     <span className="font-medium text-blue-600">64</span>
+                     <span className="font-medium text-blue-600">{posts.filter(p => (p.author?._id === user?._id)).length}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm pb-1">
                      <span className="text-slate-600">Points earned</span>
-                     <span className="font-bold text-blue-600">+35 pts</span>
+                     <span className="font-bold text-blue-600">{user?.points || 0} pts</span>
                   </div>
                </div>
             </div>
@@ -144,42 +211,70 @@ export default function DiscussionForum() {
       {/* NEW POST MODAL */}
       {isPostModalOpen && (
          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-            <div className="bg-white w-full max-w-2xl rounded-2xl shadow-xl flex flex-col overflow-hidden">
+            <form onSubmit={handleCreatePost} className="bg-white w-full max-w-2xl rounded-2xl shadow-xl flex flex-col overflow-hidden">
                {/* Header */}
                <div className="flex items-center justify-between p-5 pb-4 border-b border-slate-100">
                   <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                      <MessageCircle className="w-5 h-5 text-slate-400" /> New Discussion Post
                   </h3>
-                  <button onClick={() => setIsPostModalOpen(false)} className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition">
+                  <button type="button" onClick={() => setIsPostModalOpen(false)} className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition">
                      <X className="w-4 h-4" />
                   </button>
                </div>
                
                <div className="p-6 space-y-5">
                   <div>
+                     <label className="block text-xs font-bold text-slate-800 mb-2">Select Course *</label>
+                     <select 
+                        required
+                        value={selectedCourseId}
+                        onChange={(e) => setSelectedCourseId(e.target.value)}
+                        className="w-full p-3 border-2 border-blue-50 rounded-xl focus:outline-none focus:border-blue-500 text-slate-800 text-sm font-medium"
+                     >
+                        {myEnrollments.map((enr: any) => {
+                           const c = enr.course;
+                           return <option key={c._id || c} value={c._id || c}>{c.title}</option>
+                        })}
+                     </select>
+                  </div>
+
+                  <div>
                      <label className="block text-xs font-bold text-slate-800 mb-2">Post Title *</label>
-                     <input type="text" defaultValue="How does merge sort handle duplicate values?" className="w-full p-3 border-2 border-blue-500 rounded-xl focus:outline-none font-bold text-slate-800 text-sm" />
+                     <input 
+                       type="text" 
+                       required
+                       value={newPostTitle}
+                       onChange={e => setNewPostTitle(e.target.value)}
+                       placeholder="What is your question or topic?" 
+                       className="w-full p-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 font-bold text-slate-800 text-sm" 
+                     />
                   </div>
 
                   <div>
                      <label className="block text-xs font-bold text-slate-800 mb-2">Description *</label>
                      <div className="relative">
-                        <textarea rows={6} defaultValue="I am confused about how duplicate values are handled during the merge step.&#10;When I trace through the algorithm manually, the order seems to change.&#10;Can someone clarify this with an example?" className="w-full p-4 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-slate-700 text-sm resize-none pb-8"></textarea>
-                        <span className="absolute bottom-3 right-4 text-[10px] font-bold text-slate-400">420/1000</span>
+                        <textarea 
+                          rows={6} 
+                          required
+                          value={newPostContent}
+                          onChange={e => setNewPostContent(e.target.value)}
+                          placeholder="Provide details for the community..." 
+                          className="w-full p-4 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-slate-700 text-sm resize-none pb-8"
+                        ></textarea>
                      </div>
                   </div>
                </div>
 
                {/* Footer */}
                <div className="p-5 border-t border-slate-100 flex items-center gap-4 bg-white text-sm">
-                  <button onClick={() => setIsPostModalOpen(false)} className="px-6 py-3 bg-slate-50 border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition">
+                  <button type="button" onClick={() => setIsPostModalOpen(false)} className="px-6 py-3 bg-slate-50 border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition">
                      Cancel
                   </button>
-                  <button className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-sm text-center">
-                     Post to Forum (+5 pts)
+                  <button type="submit" disabled={submittingPost} className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-sm text-center disabled:opacity-50">
+                     {submittingPost ? 'Posting...' : 'Post to Forum'}
                   </button>
                </div>
-            </div>
+            </form>
          </div>
       )}
     </div>

@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
+import { useGamificationStore } from '@/store/useGamificationStore';
 
 export default function GamificationSettings() {
+  const { createBadge, fetchBadges, badges } = useGamificationStore();
+
   const [pointRules, setPointRules] = useState({
     lesson: 10,
     quiz: 50,
@@ -17,7 +20,54 @@ export default function GamificationSettings() {
     completer: true
   });
 
+  // Modal State
   const [isBadgeModalOpen, setIsBadgeModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form State
+  const [newBadge, setNewBadge] = useState({
+    name: 'Quiz Champion',
+    description: 'Awarded for passing 5 quizzes with a score of 80% or higher.',
+    icon: '🏆',
+    category: 'Achievement',
+    triggerEvent: 'Quiz Passed',
+    thresholdValue: 5,
+    pointsBonus: 25,
+    isVisible: true
+  });
+
+  useEffect(() => {
+     fetchBadges();
+  }, [fetchBadges]);
+
+  const handleCreateBadge = async () => {
+     if (!newBadge.name || !newBadge.description || !newBadge.icon || !newBadge.triggerEvent) {
+       alert("Please fill out all required fields.");
+       return;
+     }
+
+     setIsSubmitting(true);
+     try {
+       await createBadge(newBadge);
+       setIsBadgeModalOpen(false);
+       await fetchBadges();
+       // Reset
+       setNewBadge({
+         name: '',
+         description: '',
+         icon: '🏆',
+         category: 'Achievement',
+         triggerEvent: 'Quiz Passed',
+         thresholdValue: 1,
+         pointsBonus: 10,
+         isVisible: true
+       });
+     } catch (err) {
+       console.error("Failed to create badge", err);
+       alert("Failed to create badge.");
+     }
+     setIsSubmitting(false);
+  };
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto relative pb-10">
@@ -28,8 +78,7 @@ export default function GamificationSettings() {
                <span>🎮</span> Gamification Settings
             </h2>
             <select className="px-4 py-2 border border-slate-200 bg-white rounded-lg text-sm font-medium text-slate-700 focus:outline-none hidden md:block">
-               <option>DSA Course</option>
-               <option>Database Systems</option>
+               <option>Global Settings</option>
             </select>
          </div>
       </div>
@@ -127,7 +176,7 @@ export default function GamificationSettings() {
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                <div className="flex items-center gap-2">
                   <span>🏅</span>
-                  <h3 className="font-semibold text-slate-800">Badge Criteria</h3>
+                  <h3 className="font-semibold text-slate-800">Active Badges</h3>
                </div>
                <button 
                   onClick={() => setIsBadgeModalOpen(true)}
@@ -137,63 +186,29 @@ export default function GamificationSettings() {
                </button>
             </div>
             
-            <div className="p-6 flex-1 space-y-4">
-               {/* Badge 1 */}
-               <div className="p-4 rounded-xl border border-yellow-200 bg-yellow-50 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                     <div className="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center text-lg shadow-sm">🏆</div>
-                     <div>
-                        <h4 className="text-sm font-semibold text-slate-800">Quiz Champion</h4>
-                        <p className="text-xs text-slate-500">Pass 5 quizzes with ≥ 80%</p>
+            <div className="p-6 flex-1 space-y-4 max-h-[460px] overflow-y-auto">
+               {badges.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-6">No badges created yet.</p>
+               ) : (
+                  badges.map((badge, i) => (
+                     <div key={badge._id || i} className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                           <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center text-lg shadow-sm">
+                              {badge.icon}
+                           </div>
+                           <div>
+                              <h4 className="text-sm font-semibold text-slate-800">{badge.name}</h4>
+                              <p className="text-xs text-slate-500 w-[200px] truncate">{badge.description}</p>
+                           </div>
+                        </div>
+                        <div 
+                           className={`w-11 h-6 rounded-full p-1 cursor-pointer transition-colors ${badge.active !== false ? 'bg-blue-600' : 'bg-slate-300'}`}
+                        >
+                           <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform ${badge.active !== false ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                        </div>
                      </div>
-                  </div>
-                  <div 
-                     className={`w-11 h-6 rounded-full p-1 cursor-pointer transition-colors ${toggles.quizChamp ? 'bg-blue-600' : 'bg-slate-300'}`}
-                     onClick={() => setToggles({...toggles, quizChamp: !toggles.quizChamp})}
-                  >
-                     <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform ${toggles.quizChamp ? 'translate-x-5' : 'translate-x-0'}`}></div>
-                  </div>
-               </div>
-
-               {/* Badge 2 */}
-               <div className="p-4 rounded-xl border border-blue-200 bg-blue-50 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                     <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-lg shadow-sm">🔥</div>
-                     <div>
-                        <h4 className="text-sm font-semibold text-slate-800">Hot Streak</h4>
-                        <p className="text-xs text-slate-500">Login 5 days in a row</p>
-                     </div>
-                  </div>
-                  <div 
-                     className={`w-11 h-6 rounded-full p-1 cursor-pointer transition-colors ${toggles.hotStreak ? 'bg-blue-600' : 'bg-slate-300'}`}
-                     onClick={() => setToggles({...toggles, hotStreak: !toggles.hotStreak})}
-                  >
-                     <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform ${toggles.hotStreak ? 'translate-x-5' : 'translate-x-0'}`}></div>
-                  </div>
-               </div>
-
-               {/* Badge 3 */}
-               <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                     <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center text-lg shadow-sm">📚</div>
-                     <div>
-                        <h4 className="text-sm font-semibold text-slate-800">Course Completer</h4>
-                        <p className="text-xs text-slate-500">Finish all lessons in a course</p>
-                     </div>
-                  </div>
-                  <div 
-                     className={`w-11 h-6 rounded-full p-1 cursor-pointer transition-colors ${toggles.completer ? 'bg-blue-600' : 'bg-slate-300'}`}
-                     onClick={() => setToggles({...toggles, completer: !toggles.completer})}
-                  >
-                     <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform ${toggles.completer ? 'translate-x-5' : 'translate-x-0'}`}></div>
-                  </div>
-               </div>
-            </div>
-
-            <div className="p-6 pt-0 mt-auto">
-               <button className="w-full bg-blue-600 text-white font-medium rounded-xl py-3 hover:bg-blue-700 transition shadow-sm">
-                  Save Badge Rules
-               </button>
+                  ))
+               )}
             </div>
          </div>
       </div>
@@ -220,35 +235,59 @@ export default function GamificationSettings() {
                      <label className="block text-sm font-bold text-slate-800 mb-1">Badge Icon</label>
                      <p className="text-xs text-slate-400 mb-2">Choose an emoji or upload a custom icon:</p>
                      <div className="flex gap-2 flex-wrap">
-                        {['🏆', '⚡', '🔥', '🧠', '🌟', '💎', '🎯', '🚀', '💪', '🎓', '👑', '⭐'].map((emoji, i) => (
-                           <button key={emoji} className={`w-11 h-11 rounded-lg text-lg flex items-center justify-center transition border ${i === 0 ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100' : 'border-slate-200 bg-white hover:bg-slate-50'}`}>
-                              {emoji}
-                           </button>
-                        ))}
+                        {['🏆', '⚡', '🔥', '🧠', '🌟', '💎', '🎯', '🚀', '💪', '🎓', '👑', '⭐'].map((emoji) => {
+                           const active = newBadge.icon === emoji;
+                           return (
+                              <button 
+                                 key={emoji} 
+                                 onClick={() => setNewBadge({...newBadge, icon: emoji})}
+                                 className={`w-11 h-11 rounded-lg text-lg flex items-center justify-center transition border ${active ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-100' : 'border-slate-200 bg-white hover:bg-slate-50'}`}
+                              >
+                                 {emoji}
+                              </button>
+                           )
+                        })}
                      </div>
                   </div>
 
                   {/* Name */}
                   <div>
                      <label className="block text-sm font-bold text-slate-800 mb-2">Badge Name *</label>
-                     <input type="text" defaultValue="Quiz Champion" className="w-full text-sm font-bold text-slate-800 p-3 border-2 border-blue-500 rounded-xl focus:outline-none" />
+                     <input 
+                        type="text" 
+                        value={newBadge.name}
+                        onChange={(e) => setNewBadge({...newBadge, name: e.target.value})}
+                        className="w-full text-sm font-bold text-slate-800 p-3 border-2 border-blue-500 rounded-xl focus:outline-none" 
+                     />
                   </div>
 
                   {/* Description */}
                   <div>
                      <label className="block text-sm font-bold text-slate-800 mb-2">Description</label>
-                     <textarea rows={2} defaultValue="Awarded for passing 5 quizzes with a score of 80% or higher." className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-slate-600 resize-none"></textarea>
+                     <textarea 
+                        rows={2} 
+                        value={newBadge.description}
+                        onChange={(e) => setNewBadge({...newBadge, description: e.target.value})}
+                        className="w-full text-sm p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-slate-600 resize-none"
+                     ></textarea>
                   </div>
 
                   {/* Category */}
                   <div>
                      <label className="block text-sm font-bold text-slate-800 mb-2">Badge Category</label>
                      <div className="flex gap-2">
-                        {['Academic', 'Engagement', 'Streak', 'Achievement'].map((cat, i) => (
-                           <button key={cat} className={`px-4 py-2 rounded-lg text-xs font-bold transition border ${i === 0 ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-                              {cat}
-                           </button>
-                        ))}
+                        {['Academic', 'Engagement', 'Streak', 'Achievement'].map((cat) => {
+                           const active = newBadge.category === cat;
+                           return (
+                              <button 
+                                 key={cat} 
+                                 onClick={() => setNewBadge({...newBadge, category: cat})}
+                                 className={`px-4 py-2 rounded-lg text-xs font-bold transition border ${active ? 'bg-blue-50 border-blue-500 text-blue-600' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                              >
+                                 {cat}
+                              </button>
+                           )
+                        })}
                      </div>
                   </div>
 
@@ -256,26 +295,33 @@ export default function GamificationSettings() {
                   <div>
                      <label className="block text-sm font-bold text-slate-800 mb-2">Award Criteria</label>
                      <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 space-y-4">
-                        <div className="flex gap-4">
+                        <div className="flex flex-col sm:flex-row gap-4">
                            <div className="flex-1">
                               <label className="block text-xs font-bold text-slate-800 mb-1">Trigger Event</label>
                               <div className="relative">
-                                 <select className="w-full text-sm p-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-blue-500 text-slate-600 appearance-none">
+                                 <select 
+                                    className="w-full text-sm p-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-blue-500 text-slate-600 appearance-none"
+                                    value={newBadge.triggerEvent}
+                                    onChange={(e) => setNewBadge({...newBadge, triggerEvent: e.target.value})}
+                                 >
                                     <option>Quiz Passed</option>
+                                    <option>Lesson Completed</option>
+                                    <option>Streak Maintained</option>
                                  </select>
                                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none">▾</span>
                               </div>
                            </div>
-                           <div className="w-[180px]">
-                              <label className="block text-xs font-bold text-slate-800 mb-1">Threshold Value</label>
-                              <div className="flex items-center gap-2">
-                                 <input type="text" defaultValue="5" className="w-12 text-sm font-bold text-center text-blue-600 p-2.5 border-2 border-blue-400 rounded-lg focus:outline-none" />
-                                 <span className="text-xs text-slate-500">quizzes at</span>
-                                 <input type="text" defaultValue="80" className="w-12 text-sm font-bold text-center text-slate-800 p-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none" />
-                              </div>
+                           <div className="flex-[0.8]">
+                              <label className="block text-xs font-bold text-slate-800 mb-1">Threshold</label>
+                              <input 
+                                 type="number" 
+                                 value={newBadge.thresholdValue}
+                                 onChange={(e) => setNewBadge({...newBadge, thresholdValue: parseInt(e.target.value) || 0})}
+                                 className="w-full text-sm font-bold text-blue-600 p-2.5 border-2 border-blue-400 rounded-lg focus:outline-none" 
+                              />
                            </div>
                         </div>
-                        <p className="text-[11px] font-medium text-blue-600">%+ score required. <span className="ml-1">This badge auto-awards when conditions are met.</span></p>
+                        <p className="text-[11px] font-medium text-blue-600">This badge auto-awards when logic conditions match API triggers.</p>
                      </div>
                   </div>
 
@@ -283,7 +329,12 @@ export default function GamificationSettings() {
                   <div>
                      <label className="block text-sm font-bold text-slate-800 mb-2">Points Bonus</label>
                      <div className="flex items-center gap-3">
-                        <input type="text" defaultValue="25" className="w-24 text-sm font-bold text-slate-800 p-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500" />
+                        <input 
+                           type="number" 
+                           value={newBadge.pointsBonus}
+                           onChange={(e) => setNewBadge({...newBadge, pointsBonus: parseInt(e.target.value) || 0})}
+                           className="w-24 text-sm font-bold text-slate-800 p-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500" 
+                        />
                         <span className="text-xs font-medium text-slate-400">bonus XP awarded when badge is earned</span>
                      </div>
                   </div>
@@ -292,20 +343,15 @@ export default function GamificationSettings() {
                   <div>
                      <label className="block text-sm font-bold text-slate-800 mb-2">Badge Visibility</label>
                      <div className="flex gap-4">
-                        <label className="flex-1 border-2 border-blue-400 bg-blue-50/50 rounded-xl p-3 flex items-center gap-3 cursor-pointer">
-                           <div className="w-4 h-4 rounded-full border-4 border-blue-600 outline outline-1 outline-blue-600 bg-white"></div>
+                        <label className="flex-1 border-2 border-blue-400 bg-blue-50/50 rounded-xl p-3 flex items-center gap-3 cursor-pointer" onClick={() => setNewBadge({...newBadge, isVisible: true})}>
+                           <div className={`w-4 h-4 rounded-full border-4 ${newBadge.isVisible ? 'border-blue-600 outline outline-1 outline-blue-600 bg-white' : 'border-slate-200 bg-slate-200'}`}></div>
                            <span className="text-sm font-bold text-blue-800">Visible to student</span>
                         </label>
-                        <label className="flex-1 border border-slate-200 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition">
-                           <div className="w-4 h-4 rounded-full bg-slate-200"></div>
+                        <label className="flex-1 border border-slate-200 rounded-xl p-3 flex items-center gap-3 cursor-pointer hover:bg-slate-50 transition" onClick={() => setNewBadge({...newBadge, isVisible: false})}>
+                           <div className={`w-4 h-4 rounded-full border-4 ${!newBadge.isVisible ? 'border-blue-600 outline outline-1 outline-blue-600 bg-white' : 'border-slate-200 bg-slate-200'}`}></div>
                            <span className="text-sm font-bold text-slate-700">Hidden (surprise)</span>
                         </label>
                      </div>
-                  </div>
-                  
-                  {/* Preview Banner */}
-                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-[11px] font-medium text-blue-600 text-center">
-                     Preview: Students will see this badge in their gallery with a gold glow effect when earned.
                   </div>
                </div>
 
@@ -315,11 +361,12 @@ export default function GamificationSettings() {
                      Cancel
                   </button>
                   <div className="flex gap-3">
-                     <button className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-50 transition">
-                        Save as Draft
-                     </button>
-                     <button className="px-6 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition shadow-sm flex items-center gap-2">
-                        Create Badge →
+                     <button 
+                        onClick={handleCreateBadge}
+                        disabled={isSubmitting}
+                        className="px-6 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition shadow-sm flex items-center gap-2 disabled:opacity-50"
+                     >
+                        {isSubmitting ? 'Creating...' : 'Create Badge →'}
                      </button>
                   </div>
                </div>

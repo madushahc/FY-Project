@@ -1,23 +1,45 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema } from "mongoose";
 
 export interface IUser extends Document {
+  role: "Student" | "Lecturer" | "Admin";
+  firstName: string;
+  lastName: string;
   name: string;
   email: string;
   passwordHash: string;
-  role: 'Student' | 'Lecturer' | 'Admin';
+  university: string;
+  department: string;
   points: number;
   badges: string[];
 }
 
-const userSchema = new Schema<IUser>({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  passwordHash: { type: String, required: true },
-  role: { type: String, enum: ['Student', 'Lecturer', 'Admin'], default: 'Student' },
-  points: { type: Number, default: 0 },
-  badges: [{ type: String }],
-}, {
-  timestamps: true
-});
+const userSchema = new Schema<IUser>(
+  {
+    role: {
+      type: String,
+      enum: ["Student", "Lecturer", "Admin"],
+      default: "Student",
+      required: true,
+    },
+    firstName: { type: String, required: true, trim: true },
+    lastName: { type: String, required: true, trim: true },
+    name: { type: String, required: true },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+    passwordHash: { type: String, required: true },
+    university: { type: String, required: true, trim: true },
+    department: { type: String, required: true, trim: true },
+    points: { type: Number, default: 0 },
+    badges: [{ type: String }],
+  },
+  {
+    timestamps: true,
+  },
+);
 
-export default mongoose.model<IUser>('User', userSchema);
+export default mongoose.model<IUser>("User", userSchema);

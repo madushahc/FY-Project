@@ -1,27 +1,59 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ILesson {
+  _id?: mongoose.Types.ObjectId;
   title: string;
-  content: string; // text or video URL
-  duration: number; // in minutes
+  type: 'video' | 'quiz' | 'assignment' | 'reading' | 'link';
+  contentUrl?: string; // For video/link/reading
+  duration?: number; // In minutes
+  refId?: mongoose.Types.ObjectId; // Reference to Quiz or Assignment if type matches
+  points?: number; // Gamification points for completing this specific lesson
 }
 
 export interface IModule {
+  _id?: mongoose.Types.ObjectId;
   title: string;
   lessons: ILesson[];
 }
 
 export interface ICourse extends Document {
   title: string;
+  code: string;
+  department?: string;
   description: string;
+  creditHours?: number;
+  academicYear?: string;
+  startDate?: Date;
+  endDate?: Date;
+  maxEnrollment?: number;
+  difficultyLevel?: string;
+  thumbnailUrl?: string;
   instructor: mongoose.Types.ObjectId;
   modules: IModule[];
   category: string;
+  status: 'Published' | 'Draft';
+  enrollmentType: 'Open' | 'Restricted';
+  
+  // Gamification & Completion rules
+  completionRules?: {
+    minLessonWatchPercent: number;
+    minQuizPassScore: number;
+    requireAllAssignments: boolean;
+  };
 }
 
 const CourseSchema = new Schema<ICourse>({
   title: { type: String, required: true },
+  code: { type: String, required: true },
+  department: { type: String },
   description: { type: String, required: true },
+  creditHours: { type: Number },
+  academicYear: { type: String },
+  startDate: { type: Date },
+  endDate: { type: Date },
+  maxEnrollment: { type: Number },
+  difficultyLevel: { type: String },
+  thumbnailUrl: { type: String },
   instructor: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   modules: [
     {
@@ -29,13 +61,23 @@ const CourseSchema = new Schema<ICourse>({
       lessons: [
         {
           title: { type: String, required: true },
-          content: { type: String, required: true },
-          duration: { type: Number, required: true },
+          type: { type: String, enum: ['video', 'quiz', 'assignment', 'reading', 'link'], required: true },
+          contentUrl: { type: String },
+          duration: { type: Number },
+          refId: { type: Schema.Types.ObjectId },
+          points: { type: Number, default: 10 }
         }
       ]
     }
   ],
-  category: { type: String, required: true }
+  category: { type: String, default: 'General' },
+  status: { type: String, enum: ['Published', 'Draft'], default: 'Draft' },
+  enrollmentType: { type: String, enum: ['Open', 'Restricted'], default: 'Open' },
+  completionRules: {
+    minLessonWatchPercent: { type: Number, default: 80 },
+    minQuizPassScore: { type: Number, default: 60 },
+    requireAllAssignments: { type: Boolean, default: true }
+  }
 }, {
   timestamps: true
 });

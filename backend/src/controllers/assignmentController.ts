@@ -1,0 +1,60 @@
+import { Request, Response } from 'express';
+import Assignment from '../models/Assignment.js';
+import Submission from '../models/Submission.js';
+import { AuthRequest } from '../middleware/auth.js';
+
+export const createAssignment = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const assignment = await Assignment.create(req.body);
+    res.status(201).json(assignment);
+  } catch (error) {
+    res.status(400).json({ message: 'Invalid assignment data' });
+  }
+};
+
+export const getAssignmentsByCourse = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const filter: any = { course: req.params.courseId as any };
+    const assignments = await Assignment.find(filter);
+    res.json(assignments);
+  } catch (error) {
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+export const submitAssignment = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ message: 'No file uploaded' });
+      return;
+    }
+
+    const submission = await Submission.create({
+      assignment: req.params.assignmentId as any,
+      student: req.user?._id as any,
+      fileUrl: `/uploads/${req.file.filename}`,
+      studentNotes: req.body.studentNotes || ''
+    });
+
+    res.status(201).json(submission);
+  } catch (error) {
+    res.status(400).json({ message: 'Submission failed' });
+  }
+};
+
+export const gradeSubmission = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const submission = await Submission.findByIdAndUpdate(
+      req.params.submissionId,
+      {
+        score: req.body.score,
+        feedback: req.body.feedback,
+        status: 'Graded'
+      },
+      { new: true }
+    );
+    res.json(submission);
+  } catch (error) {
+    res.status(400).json({ message: 'Grading failed' });
+  }
+};
