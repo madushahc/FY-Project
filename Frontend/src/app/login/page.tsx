@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GraduationCap, Mail, Lock } from 'lucide-react';
@@ -11,11 +12,33 @@ export default function Login() {
   const [role, setRole] = useState<Role>('Student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push(`/${role.toLowerCase()}`);
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await axios.post('http://localhost:5000/api/auth/login', {
+        email,
+        password
+      });
+
+      // Save token (usually in secure cookie/localStorage)
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data));
+
+      // Push to respective dashboard depending on returned role
+      const userRole = response.data.role.toLowerCase();
+      router.push(`/${userRole}`);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to sign in. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -40,6 +63,11 @@ export default function Login() {
           <RoleSelector selectedRole={role} onChange={setRole} />
 
           <form onSubmit={handleLogin} className="space-y-5">
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm font-medium rounded-lg text-center">
+                {error}
+              </div>
+            )}
             <AuthInput
               id="email"
               type="email"

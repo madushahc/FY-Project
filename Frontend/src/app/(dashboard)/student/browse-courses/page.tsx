@@ -6,106 +6,60 @@ import { CourseCard, CourseData } from '@/components/ui/CourseCard';
 
 export default function BrowseCourses() {
   const [activeFilter, setActiveFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const courses: CourseData[] = [
-    {
-      id: '1',
-      title: 'Data Structures & Algorithms',
-      code: 'CS301',
-      department: 'Computing',
-      lecturer: 'Dr. Rajapaksa',
-      lessons: 24,
-      students: 52,
-      rating: 4.8,
-      tags: ['Core'],
-      emoji: '💻',
-      colorType: 'blue',
-      status: 'enrolled',
-    },
-    {
-      id: '2',
-      title: 'Database Management Systems',
-      code: 'CS302',
-      department: 'Computing',
-      lecturer: 'Dr. Rajapaksa',
-      lessons: 18,
-      students: 48,
-      rating: 4.6,
-      tags: ['Core'],
-      emoji: '🗄️',
-      colorType: 'emerald',
-      status: 'enrolled',
-    },
-    {
-      id: '3',
-      title: 'Web Technologies',
-      code: 'CS303',
-      department: 'Computing',
-      lecturer: 'Dr. Silva',
-      lessons: 20,
-      students: 45,
-      rating: 4.9,
-      tags: ['Core'],
-      emoji: '🌐',
-      colorType: 'purple',
-      status: 'enrolled',
-    },
-    {
-      id: '4',
-      title: 'Machine Learning Basics',
-      code: 'CS401',
-      department: 'Computing',
-      lecturer: 'Dr. Kumar',
-      lessons: 18,
-      students: 32,
-      rating: 4.7,
-      tags: ['Elective', 'New'],
-      emoji: '🤖',
-      colorType: 'orange',
-      status: 'available',
-    },
-    {
-      id: '5',
-      title: 'Software Engineering',
-      code: 'CS304',
-      department: 'Computing',
-      lecturer: 'Dr. Rajapaksa',
-      lessons: 22,
-      students: 47,
-      rating: 4.5,
-      tags: ['Core'],
-      emoji: '⚙️',
-      colorType: 'blue',
-      status: 'enrolled',
-    },
-    {
-      id: '6',
-      title: 'Business Analytics',
-      code: 'BA201',
-      department: 'Business',
-      lecturer: 'Dr. Peris',
-      lessons: 16,
-      students: 38,
-      rating: 4.4,
-      tags: ['Elective'],
-      emoji: '📊',
-      colorType: 'emerald',
-      status: 'available',
-    },
+  // Extended mocked courses based on screenshot layout (9 of 18 courses)
+  const courses = [
+     {
+        id: 'c1', title: 'Data Structures & Algorithms', code: 'CS301 · Computing', 
+        lecturer: 'Dr. Rajapaksa', lessons: 24, students: 52, rating: 4.8, 
+        tag: 'Core', tagColor: 'bg-blue-50 text-blue-600', icon: '💻', isEnrolled: false
+     },
+     {
+        id: 'c2', title: 'Database Management Systems', code: 'CS302 · Computing', 
+        lecturer: 'Dr. Rajapaksa', lessons: 18, students: 48, rating: 4.6, 
+        tag: 'Core', tagColor: 'bg-blue-50 text-blue-600', icon: '🗄️', isEnrolled: true
+     },
+     {
+        id: 'c3', title: 'Web Technologies', code: 'CS303 · Computing', 
+        lecturer: 'Dr. Silva', lessons: 20, students: 45, rating: 4.9, 
+        tag: 'Core', tagColor: 'bg-blue-50 text-blue-600', icon: '🌐', isEnrolled: true
+     },
+     {
+        id: 'c4', title: 'Machine Learning Basics', code: 'CS401 · Computing', 
+        lecturer: 'Dr. Kumar', lessons: 18, students: 32, rating: 4.7, 
+        tag: 'Elective', tagColor: 'bg-orange-50 text-orange-600', icon: '🤖', isEnrolled: false,
+        flag: '✨ New', flagColor: 'bg-blue-600 text-white'
+     },
+     {
+        id: 'c5', title: 'Software Engineering', code: 'CS304 · Computing', 
+        lecturer: 'Dr. Rajapaksa', lessons: 22, students: 47, rating: 4.5, 
+        tag: 'Core', tagColor: 'bg-blue-50 text-blue-600', icon: '⚙️', isEnrolled: true
+     },
+     {
+        id: 'c6', title: 'Business Analytics', code: 'BA201 · Business', 
+        lecturer: 'Dr. Peris', lessons: 16, students: 38, rating: 4.4, 
+        tag: 'Elective', tagColor: 'bg-orange-50 text-orange-600', icon: '📊', isEnrolled: false
+     }
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4 border-b border-slate-200 pb-4 mb-6">
-        <span className="font-semibold text-slate-800 mr-2">Filter:</span>
+    <div className="space-y-6 pb-20">
+      <div className="flex justify-between items-center mb-6">
+         <h2 className="text-2xl font-bold text-slate-800">Browse Courses</h2>
+      </div>
+
+      {/* Top Filter Bar */}
+      <div className="flex flex-wrap items-center gap-4 border-b border-slate-200 pb-4">
+        <span className="font-semibold text-slate-800 text-sm">Filter:</span>
         {['All (18)', 'Computing', 'Business', 'Core Modules', 'Electives', 'New', 'Available'].map((f) => (
           <button
             key={f}
             onClick={() => setActiveFilter(f)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeFilter === f 
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${
+              (activeFilter === f || (activeFilter === 'All' && f === 'All (18)'))
                 ? 'bg-blue-600 text-white' 
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-slate-200'
             }`}
           >
             {f}
@@ -113,90 +67,130 @@ export default function BrowseCourses() {
         ))}
       </div>
 
-      <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex items-center">
-        <Search className="w-5 h-5 text-slate-400 ml-3 mr-2" />
+      {/* Search Bar */}
+      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center">
+        <Search className="w-5 h-5 text-slate-400 ml-3 mr-3 shrink-0" />
         <input 
           type="text" 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search by course name, code, or lecturer..." 
-          className="flex-1 py-2 px-2 focus:outline-none text-slate-700" 
+          className="flex-1 py-1 px-2 focus:outline-none text-slate-700 text-sm font-medium placeholder:text-slate-400" 
         />
-        <button className="bg-blue-600 text-white px-8 py-2 rounded-lg font-medium hover:bg-blue-700 transition">
+        <button className="bg-blue-600 text-white px-8 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-700 transition shadow-sm">
           Search
         </button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 mt-6">
+      <div className="flex flex-col lg:flex-row gap-6 mt-6 items-start">
         {/* Sidebar Filters */}
-        <div className="w-full lg:w-64 flex-shrink-0">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-            <h3 className="font-semibold text-slate-800 mb-5">Filters</h3>
-            
-            <div className="space-y-5">
+        <div className="w-full lg:w-64 bg-white border border-slate-200 rounded-2xl flex flex-col shrink-0 overflow-hidden shadow-sm">
+           <div className="p-5 border-b border-slate-100">
+              <h3 className="font-bold text-slate-800">Filters</h3>
+           </div>
+           
+           <div className="p-5 space-y-6">
+              {/* Department */}
               <div>
-                <h4 className="text-xs font-bold text-slate-800 mb-3 uppercase tracking-wider">Department</h4>
-                <div className="space-y-2.5">
-                  {['All Departments', 'Computing', 'Business', 'Engineering'].map((dept, i) => (
-                    <label key={dept} className="flex items-center gap-3 cursor-pointer">
-                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${i === 0 ? 'border-blue-600 bg-blue-50' : 'border-slate-300'}`}>
-                        {i === 0 && <div className="w-2 h-2 bg-blue-600 rounded-full" />}
-                      </div>
-                      <span className={`text-sm ${i === 0 ? 'text-blue-600 font-medium' : 'text-slate-600'}`}>{dept}</span>
-                    </label>
-                  ))}
-                </div>
+                 <h4 className="text-xs font-bold text-slate-800 mb-3">Department</h4>
+                 <div className="space-y-2.5">
+                    {['All Departments', 'Computing', 'Business', 'Engineering'].map((opt, i) => (
+                       <label key={i} className="flex items-center gap-3 cursor-pointer group">
+                          <input type="radio" name="dept" className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500" defaultChecked={i === 0} />
+                          <span className={`text-sm font-medium ${i === 0 ? 'text-blue-700' : 'text-slate-500 group-hover:text-slate-700'}`}>{opt}</span>
+                       </label>
+                    ))}
+                 </div>
               </div>
 
+              {/* Module Type */}
               <div>
-                <h4 className="text-xs font-bold text-slate-800 mb-3 uppercase tracking-wider mt-6">Module Type</h4>
-                <div className="space-y-2.5">
-                  {['All Types', 'Core Module', 'Elective', 'Workshop'].map((type, i) => (
-                    <label key={type} className="flex items-center gap-3 cursor-pointer">
-                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${i === 0 ? 'border-blue-600 bg-blue-50' : 'border-slate-300'}`}>
-                        {i === 0 && <div className="w-2 h-2 bg-blue-600 rounded-full" />}
-                      </div>
-                      <span className={`text-sm ${i === 0 ? 'text-blue-600 font-medium' : 'text-slate-600'}`}>{type}</span>
-                    </label>
-                  ))}
-                </div>
+                 <h4 className="text-xs font-bold text-slate-800 mb-3">Module Type</h4>
+                 <div className="space-y-2.5">
+                    {['All Types', 'Core Module', 'Elective', 'Workshop'].map((opt, i) => (
+                       <label key={i} className="flex items-center gap-3 cursor-pointer group">
+                          <input type="radio" name="type" className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500" defaultChecked={i === 0} />
+                          <span className={`text-sm font-medium ${i === 0 ? 'text-blue-700' : 'text-slate-500 group-hover:text-slate-700'}`}>{opt}</span>
+                       </label>
+                    ))}
+                 </div>
               </div>
 
+              {/* Semester Select */}
               <div>
-                <h4 className="text-xs font-bold text-slate-800 mb-3 uppercase tracking-wider mt-6">Semester</h4>
-                <select className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option>2024/2025 Sem 2</option>
-                  <option>2024/2025 Sem 1</option>
-                </select>
+                 <h4 className="text-xs font-bold text-slate-800 mb-2">Semester</h4>
+                 <select className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-500 appearance-none">
+                    <option>2024/2025 Sem 2 ▾</option>
+                 </select>
               </div>
 
+              {/* Lecturer Select */}
               <div>
-                <h4 className="text-xs font-bold text-slate-800 mb-3 uppercase tracking-wider mt-6">Lecturer</h4>
-                <select className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option>All Lecturers</option>
-                  <option>Dr. Rajapaksa</option>
-                </select>
+                 <h4 className="text-xs font-bold text-slate-800 mb-2">Lecturer</h4>
+                 <select className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:border-blue-500 appearance-none">
+                    <option>All Lecturers ▾</option>
+                 </select>
               </div>
 
-              <button className="w-full py-2.5 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition mt-6 text-sm">
-                Clear Filters
-              </button>
-            </div>
-          </div>
+              <div className="pt-2">
+                 <button className="w-full py-3 bg-slate-50 text-slate-700 font-bold rounded-xl text-sm border border-slate-200 hover:bg-slate-100 transition">
+                    Clear Filters
+                 </button>
+              </div>
+           </div>
         </div>
 
         {/* Course Grid */}
         <div className="flex-1">
-          <div className="flex justify-between items-center mb-4 text-sm text-slate-500">
+          <div className="flex justify-between items-center mb-4 text-sm font-medium text-slate-500 border-b border-transparent">
             <span>Showing 9 of 18 courses</span>
-            <select className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none text-slate-700 font-medium">
-              <option>Sort: Most Popular</option>
-              <option>Sort: Highest Rated</option>
-              <option>Sort: Newest</option>
-            </select>
+            <div className="flex items-center gap-2">
+               <span>Sort:</span>
+               <select className="bg-transparent font-semibold text-slate-700 focus:outline-none cursor-pointer">
+                  <option>Most Popular ▾</option>
+               </select>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {courses.map(course => (
-              <CourseCard key={course.id} course={course} />
+               <div key={course.id} className="bg-white border border-slate-200 rounded-[20px] overflow-hidden shadow-sm hover:shadow-md transition group relative flex flex-col">
+                  
+                  {/* Status Flags */}
+                  <div className="absolute top-4 left-4 right-4 flex justify-between z-10 pointer-events-none">
+                     {course.isEnrolled && <span className="px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[10px] font-bold tracking-wide">Enrolled</span>}
+                     {!course.isEnrolled && <div></div>}
+                     {course.flag && <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wide ${course.flagColor}`}>{course.flag}</span>}
+                  </div>
+
+                  <div className="h-40 bg-slate-50 border-b border-slate-100 flex items-center justify-center text-6xl group-hover:bg-blue-50/30 transition-colors">
+                     {course.icon}
+                  </div>
+
+                  <div className="p-5 flex flex-col flex-1">
+                     <h3 className="font-bold text-slate-800 text-base mb-1 line-clamp-1">{course.title}</h3>
+                     <p className="text-xs font-medium text-slate-400 mb-4">{course.code}</p>
+
+                     <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-2">
+                        <span className="text-[10px]">👨‍🏫</span> {course.lecturer}
+                     </div>
+                     <div className="flex items-center gap-4 text-xs font-medium text-slate-500 mb-4">
+                        <span className="flex items-center gap-1.5"><span className="text-[10px]">📖</span> {course.lessons} lessons</span>
+                        <span className="flex items-center gap-1.5"><span className="text-[10px]">👥</span> {course.students} students</span>
+                     </div>
+
+                     <div className="flex items-center justify-between mb-5">
+                        <span className="text-sm font-bold text-yellow-500">⭐ {course.rating.toFixed(1)}</span>
+                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${course.tagColor}`}>{course.tag}</span>
+                     </div>
+
+                     <div className="mt-auto">
+                        <button className={`w-full py-2.5 rounded-xl text-sm font-bold transition shadow-sm ${course.isEnrolled ? 'bg-white border border-blue-200 text-blue-600 hover:bg-blue-50' : 'bg-blue-600 border border-transparent text-white hover:bg-blue-700'}`}>
+                           {course.isEnrolled ? 'Continue Learning →' : 'Enroll Now →'}
+                        </button>
+                     </div>
+                  </div>
+               </div>
             ))}
           </div>
         </div>

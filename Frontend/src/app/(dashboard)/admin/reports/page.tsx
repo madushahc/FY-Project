@@ -116,9 +116,98 @@ export default function AdminReports() {
 
   const renderEngagementReport = () => {
      return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 flex-1 min-w-0 flex flex-col items-center">
-            <h1 className="text-4xl font-bold text-slate-300 mt-20 mb-4">Engagement Report</h1>
-            <p className="text-slate-500 font-medium">UI variant matching the Figma mockup</p>
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-semibold text-slate-800 flex items-center gap-2 mb-1"><span>📊</span> Engagement Report</h2>
+              <p className="text-sm text-slate-500 font-medium ml-8">Platform-wide · Last 30 days · Jan 1 – Jan 31, 2025</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <select className="px-4 py-2 border border-slate-200 bg-white rounded-lg text-sm font-medium text-slate-700 focus:outline-none shadow-sm"><option>Jan 2025</option></select>
+              <select className="px-4 py-2 border border-slate-200 bg-white rounded-lg text-sm font-medium text-slate-700 focus:outline-none shadow-sm"><option>Last 30 days</option></select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+             <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+               <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Active Students</p>
+               <h3 className="text-3xl font-bold text-blue-600 mb-1">284</h3><p className="text-emerald-500 text-xs font-bold">▲ 12.4%</p>
+             </div>
+             <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+               <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Total Logins</p>
+               <h3 className="text-3xl font-bold text-blue-600 mb-1">3,847</h3><p className="text-emerald-500 text-xs font-bold">▲ 8.2%</p>
+             </div>
+             <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+               <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Avg Session</p>
+               <h3 className="text-3xl font-bold text-blue-600 mb-1">24 min</h3><p className="text-emerald-500 text-xs font-bold">▲ 3.1 min</p>
+             </div>
+             <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+               <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Completion Rate</p>
+               <h3 className="text-3xl font-bold text-blue-600 mb-1">68%</h3><p className="text-emerald-500 text-xs font-bold">▲ +6%</p>
+             </div>
+          </div>
+
+          <div className="bg-white border flex flex-col border-slate-200 rounded-2xl shadow-sm overflow-hidden p-6">
+             <h3 className="font-semibold text-slate-800 mb-6">Daily Active Users</h3>
+             <div className="flex-1 flex items-end gap-2 h-48 relative">
+               {[
+                 { v: 30, d: 'Jan 18' }, { v: 45, d: '' }, { v: 55, d: '' }, { v: 40, d: '' },
+                 { v: 65, d: 'Jan 20' }, { v: 70, d: '' }, { v: 35, d: '' }, { v: 25, d: 'Jan 22' },
+                 { v: 50, d: '' }, { v: 60, d: '' }, { v: 65, d: '' }, { v: 40, d: 'Jan 24' },
+                 { v: 38, d: '' }, { v: 58, d: '' }
+               ].map((bar, i) => (
+                 <div key={i} className="flex-1 flex flex-col justify-end items-center group relative h-full">
+                    <div className="w-full bg-blue-500 rounded-t-sm hover:bg-blue-600 transition-colors" style={{ height: `${bar.v}%` }}></div>
+                    {bar.d && <span className="absolute -bottom-6 text-[10px] font-medium text-slate-400">{bar.d}</span>}
+                 </div>
+               ))}
+             </div>
+             <div className="h-6"></div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden w-full">
+             <div className="p-5 border-b border-slate-100">
+                <h3 className="font-semibold text-slate-800">Top Performing Lecturers</h3>
+             </div>
+             <div className="overflow-x-auto w-full">
+               <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="bg-white border-b border-slate-100">
+                     <tr className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <th className="py-4 pl-6 pr-4">Lecturer</th>
+                        <th className="py-4 px-4">Courses</th>
+                        <th className="py-4 px-4">Avg Engagement</th>
+                        <th className="py-4 px-4">Completions</th>
+                        <th className="py-4 pr-6 pl-4">Badges Given</th>
+                     </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {[
+                      { l: 'Dr. Rajapaksa', c: 3, e: '82%', comp: 156, bg: 47 },
+                      { l: 'Dr. Silva', c: 2, e: '76%', comp: 98, bg: 31 },
+                      { l: 'Dr. Kumar', c: 1, e: '91%', comp: 68, bg: 22 },
+                      { l: 'Dr. Peris', c: 2, e: '68%', comp: 74, bg: 18 }
+                    ].map((row, i) => (
+                       <tr key={i} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-4 pl-6 pr-4 font-bold text-slate-800">{row.l}</td>
+                          <td className="py-4 px-4 text-slate-600">{row.c}</td>
+                          <td className="py-4 px-4 font-bold text-blue-600">{row.e}</td>
+                          <td className="py-4 px-4 text-slate-600">{row.comp}</td>
+                          <td className="py-4 pr-6 pl-4 text-slate-600">{row.bg}</td>
+                       </tr>
+                    ))}
+                  </tbody>
+               </table>
+             </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+             <button className="px-4 py-2 border border-slate-200 bg-white text-slate-700 font-bold rounded-lg text-sm hover:bg-slate-50 transition shadow-sm flex items-center gap-2">
+               📥 Download PDF
+             </button>
+             <button className="px-4 py-2 bg-blue-600 border border-transparent rounded-lg text-sm font-bold text-white hover:bg-blue-700 transition shadow-sm flex items-center gap-2">
+               📊 Export CSV
+             </button>
+          </div>
         </div>
      );
   };
