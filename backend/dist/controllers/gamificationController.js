@@ -1,5 +1,6 @@
 import Badge from '../models/Badge.js';
 import User from '../models/User.js';
+import GamificationConfig from '../models/GamificationConfig.js';
 export const getBadges = async (req, res) => {
     try {
         const badges = await Badge.find({ active: true });
@@ -43,6 +44,37 @@ export const getLeaderboard = async (req, res) => {
     }
     catch (error) {
         res.status(500).json({ message: 'Server Error' });
+    }
+};
+export const getPointRules = async (req, res) => {
+    try {
+        let config = await GamificationConfig.findOne();
+        if (!config) {
+            config = await GamificationConfig.create({});
+        }
+        res.json(config);
+    }
+    catch (error) {
+        res.status(500).json({ message: error.message || 'Error fetching point rules' });
+    }
+};
+export const updatePointRules = async (req, res) => {
+    try {
+        let config = await GamificationConfig.findOne();
+        if (!config) {
+            config = new GamificationConfig(req.body);
+        }
+        else {
+            config.lesson = req.body.lesson ?? config.lesson;
+            config.quiz = req.body.quiz ?? config.quiz;
+            config.assignment = req.body.assignment ?? config.assignment;
+            config.forum = req.body.forum ?? config.forum;
+        }
+        await config.save();
+        res.json(config);
+    }
+    catch (error) {
+        res.status(500).json({ message: error.message || 'Error updating point rules' });
     }
 };
 //# sourceMappingURL=gamificationController.js.map

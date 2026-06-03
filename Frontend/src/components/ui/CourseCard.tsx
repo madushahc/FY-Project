@@ -129,13 +129,13 @@ export function CourseCard({ course }: { course: CourseData }) {
 
         {/* Call to Action Button */}
         {course.status === 'enrolled' ? (
-          <button className="w-full py-2.5 text-sm font-medium text-blue-600 bg-blue-50 border border-transparent rounded-lg hover:bg-blue-100 transition-colors">
+          <Link href={`/student/courses/${course.id}`} className="w-full py-2.5 text-center block text-sm font-medium text-blue-600 bg-blue-50 border border-transparent rounded-lg hover:bg-blue-100 transition-colors">
             Continue Learning →
-          </button>
+          </Link>
         ) : course.status === 'completed' ? (
-          <button className="w-full py-2.5 text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors">
+          <Link href={`/student/courses/${course.id}`} className="w-full py-2.5 text-center block text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors">
             Review Course
-          </button>
+          </Link>
         ) : (
           <button className="w-full py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
             Enroll Now →

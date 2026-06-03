@@ -1,11 +1,52 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link as LinkIcon, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useCourseStore } from '@/store/useCourseStore';
+import api from '@/lib/api';
 
 export default function AddAssignment() {
   const router = useRouter();
+  const { myCourses, fetchMyCreatedCourses } = useCourseStore();
+
+  const [title, setTitle] = useState('');
+  const [course, setCourse] = useState('');
+  const [instructions, setInstructions] = useState('');
+  const [points, setPoints] = useState('100');
+  const [deadline, setDeadline] = useState('');
+  const [penalty, setPenalty] = useState('0');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+     fetchMyCreatedCourses();
+  }, [fetchMyCreatedCourses]);
+
+  const handlePublish = async () => {
+     if (!title || !course || !instructions || !deadline) {
+        alert("Please fill out all required fields.");
+        return;
+     }
+     
+     setLoading(true);
+     try {
+        await api.post('/assignments', {
+           title,
+           course,
+           instructions,
+           points: Number(points),
+           deadline: new Date(deadline),
+           latePenaltyPercent: Number(penalty),
+           isPublished: true
+        });
+        alert("Assignment published successfully!");
+        router.push('/lecturer/activities');
+     } catch(err) {
+        console.error("Failed to publish assignment", err);
+        alert("Failed to publish assignment.");
+     }
+     setLoading(false);
+  };
 
   return (
     <div className="space-y-6 pb-20 mt-2 max-w-6xl mx-auto">
@@ -14,40 +55,59 @@ export default function AddAssignment() {
       </div>
 
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-medium text-slate-400">
-           Software Engineering Assignment 2 — <span className="text-slate-600">UML Class Diagram</span>
-        </h2>
-        <button className="px-5 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-sm text-sm">
-           Save Assignment
+        <input 
+           type="text" 
+           placeholder="Assignment Title (e.g. UML Class Diagram)" 
+           value={title}
+           onChange={(e) => setTitle(e.target.value)}
+           className="text-xl font-medium text-slate-800 bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-blue-500 focus:outline-none w-[400px] pb-1 transition-colors placeholder:text-slate-400"
+        />
+        <button onClick={handlePublish} disabled={loading} className="px-5 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-sm text-sm disabled:opacity-50">
+           {loading ? 'Saving...' : 'Save Assignment'}
         </button>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
          <div className="space-y-8">
             
+            <div>
+               <label className="block text-sm font-bold text-slate-800 mb-2">Select Course *</label>
+               <select 
+                  value={course}
+                  onChange={(e) => setCourse(e.target.value)}
+                  className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-slate-700 text-sm font-medium shadow-sm"
+               >
+                  <option value="">Select a course...</option>
+                  {myCourses.map((c: any) => (
+                     <option key={c._id} value={c._id}>{c.title}</option>
+                  ))}
+               </select>
+            </div>
+
             {/* Instructions */}
             <div>
                <label className="block text-sm font-bold text-slate-800 mb-2">Assignment Instructions *</label>
                <textarea 
                   rows={5}
-                  defaultValue="Design a comprehensive class diagram for a Library Management System.&#10;Include all major classes, attributes, methods, and relationships.&#10;Use correct UML notation including visibility, data types, and multiplicity."
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
+                  placeholder="Design a comprehensive class diagram..."
                   className="w-full p-4 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-slate-700 text-sm font-medium resize-none shadow-sm"
                ></textarea>
             </div>
 
-            {/* Grid Settings */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                <div>
                   <label className="block text-sm font-bold text-slate-800 mb-2">Points Value *</label>
-                  <input type="text" defaultValue="80" className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-700 shadow-sm" />
+                  <input type="number" value={points} onChange={(e) => setPoints(e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-700 shadow-sm" />
                </div>
                <div>
                   <label className="block text-sm font-bold text-slate-800 mb-2">Submission Deadline *</label>
-                  <input type="text" defaultValue="Jan 27, 2025 11:59 PM" className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-700 shadow-sm" />
+                  <input type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-700 shadow-sm" />
                </div>
                <div>
                   <label className="block text-sm font-bold text-slate-800 mb-2">Late Submission Penalty (%)</label>
-                  <input type="text" defaultValue="10" className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-700 shadow-sm" />
+                  <input type="number" value={penalty} onChange={(e) => setPenalty(e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-sm text-slate-700 shadow-sm" />
                </div>
                <div>
                   <label className="block text-sm font-bold text-slate-800 mb-2">Submission Type</label>
@@ -95,11 +155,11 @@ export default function AddAssignment() {
             </div>
 
             <div className="flex justify-end gap-4 mt-10 pt-6 border-t border-slate-100">
-               <button className="px-6 py-2.5 bg-slate-50 text-slate-700 font-bold rounded-xl border border-slate-200 hover:bg-slate-100 transition text-sm">
-                  Save as Draft
+               <button onClick={() => router.back()} className="px-6 py-2.5 bg-slate-50 text-slate-700 font-bold rounded-xl border border-slate-200 hover:bg-slate-100 transition text-sm">
+                  Cancel
                </button>
-               <button onClick={() => router.back()} className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-sm text-sm">
-                  Publish Assignment
+               <button onClick={handlePublish} disabled={loading} className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-sm text-sm disabled:opacity-50">
+                  {loading ? 'Publishing...' : 'Publish Assignment'}
                </button>
             </div>
 

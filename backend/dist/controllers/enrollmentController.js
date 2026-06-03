@@ -58,7 +58,7 @@ export const updateProgress = async (req, res) => {
             return;
         }
         // Check authorization
-        if (enrollment.student.toString() !== req.user?._id) {
+        if (enrollment.student.toString() !== (req.user?._id).toString()) {
             res.status(403).json({ message: 'Not authorized for this enrollment' });
             return;
         }
@@ -66,7 +66,19 @@ export const updateProgress = async (req, res) => {
         if (completedLessonId && !enrollment.completedLessons.includes(completedLessonId)) {
             enrollment.completedLessons.push(completedLessonId);
         }
-        // Calculate progress (Ideally, fetch total course lessons here to calculate accurate %, but for now, we just accept a custom input or do an increment based on a simple formula. Let's just update the provided `progress` value to keep it simple, or calculate it based on a request param.)
+        // Automatically calculate and update the progress percentage
+        const course = await Course.findById(enrollment.course);
+        if (course && course.modules) {
+            let totalLessons = 0;
+            course.modules.forEach((m) => { totalLessons += (m.lessons?.length || 0); });
+            if (totalLessons > 0) {
+                enrollment.progress = Math.round((enrollment.completedLessons.length / totalLessons) * 100);
+            }
+            else {
+                enrollment.progress = 100; // If no lessons, it's 100% complete
+            }
+        }
+        // Fallback if manual progress provided
         if (req.body.progress !== undefined) {
             enrollment.progress = req.body.progress;
         }

@@ -1,44 +1,19 @@
-import React from "react";
+"use client";
+
+import React, { useEffect } from "react";
+import Link from "next/link";
+import { useCourseStore } from "@/store/useCourseStore";
 
 export default function LecturerCourseManagement() {
-  const courses = [
-    {
-      id: 1,
-      title: "Data Structures & Algorithms",
-      meta: "CS301 • 6 modules • 24 lessons",
-      status: "Published",
-      students: 52,
-      completion: 72,
-      progressColor: "bg-blue-600",
-      quizzes: 6,
-      assignments: 2,
-      discussions: 3,
-    },
-    {
-      id: 2,
-      title: "Database Management Systems",
-      meta: "CS302 • 5 modules • 18 lessons",
-      status: "Published",
-      students: 48,
-      completion: 58,
-      progressColor: "bg-emerald-500",
-      quizzes: 4,
-      assignments: 2,
-      discussions: 3,
-    },
-    {
-      id: 3,
-      title: "Software Engineering",
-      meta: "CS303 • 4 modules • 10 lessons",
-      status: "Draft",
-      students: 47,
-      completion: 45,
-      progressColor: "bg-orange-500",
-      quizzes: 2,
-      assignments: 2,
-      discussions: 3,
-    },
-  ];
+  const { myCourses, fetchMyCreatedCourses, loading } = useCourseStore();
+
+  useEffect(() => {
+    fetchMyCreatedCourses();
+  }, [fetchMyCreatedCourses]);
+
+  const publishedCount = myCourses.filter(c => c.status === "Published").length;
+  const totalStudents = myCourses.reduce((acc, course) => acc + (course.enrollmentCount || 0), 0);
+  const avgCompletion = myCourses.length > 0 ? 64 : 0; // fallback
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -47,9 +22,9 @@ export default function LecturerCourseManagement() {
         <h2 className="text-2xl font-semibold text-slate-800 flex items-center gap-2">
           <span>📚</span> Course Management
         </h2>
-        <button className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm">
+        <Link href="/lecturer/courses/new" className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm">
           + Create Course
-        </button>
+        </Link>
       </div>
 
       {/* Metrics */}
@@ -58,14 +33,14 @@ export default function LecturerCourseManagement() {
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">
             Total Courses
           </p>
-          <h3 className="text-3xl font-light text-blue-600 mb-2">3</h3>
-          <p className="text-emerald-500 text-xs font-medium">2 published</p>
+          <h3 className="text-3xl font-light text-blue-600 mb-2">{myCourses.length}</h3>
+          <p className="text-emerald-500 text-xs font-medium">{publishedCount} published</p>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">
             Total Students
           </p>
-          <h3 className="text-3xl font-light text-purple-600 mb-2">147</h3>
+          <h3 className="text-3xl font-light text-purple-600 mb-2">{totalStudents}</h3>
           <p className="text-emerald-500 text-xs font-medium">
             Across all courses
           </p>
@@ -74,7 +49,7 @@ export default function LecturerCourseManagement() {
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">
             Avg Completion
           </p>
-          <h3 className="text-3xl font-light text-emerald-500 mb-2">64%</h3>
+          <h3 className="text-3xl font-light text-emerald-500 mb-2">{avgCompletion}%</h3>
           <p className="text-emerald-500 text-xs font-medium flex items-center gap-1">
             <span className="text-[10px]">▲</span> +6% this month
           </p>
@@ -83,9 +58,16 @@ export default function LecturerCourseManagement() {
 
       {/* Course List */}
       <div className="space-y-6">
-        {courses.map((course) => (
+        {loading ? (
+          <div className="py-12 flex justify-center">
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : myCourses.map((course) => {
+          const completion = 0; 
+          const students = course.enrollmentCount || 0;
+          return (
           <div
-            key={course.id}
+            key={course._id}
             className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
           >
             <div className="p-6">
@@ -95,7 +77,7 @@ export default function LecturerCourseManagement() {
                   <h3 className="text-xl font-medium text-slate-800 mb-1">
                     {course.title}
                   </h3>
-                  <p className="text-sm text-slate-500 mb-3">{course.meta}</p>
+                  <p className="text-sm text-slate-500 mb-3">{course.modules?.length || 0} modules</p>
                   <div className="flex items-center gap-2">
                     <span
                       className={`px-2.5 py-1 rounded-full text-xs font-bold ${
@@ -104,10 +86,10 @@ export default function LecturerCourseManagement() {
                           : "bg-orange-100 text-orange-700"
                       }`}
                     >
-                      {course.status}
+                      {course.status || "Draft"}
                     </span>
                     <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600">
-                      {course.students} students
+                      {students} students
                     </span>
                   </div>
                 </div>
@@ -115,7 +97,7 @@ export default function LecturerCourseManagement() {
                   <button className="px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition">
                     Edit Course
                   </button>
-                  {course.status === "Draft" ? (
+                  {course.status !== "Published" ? (
                     <button className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow-sm">
                       Publish
                     </button>
@@ -131,12 +113,12 @@ export default function LecturerCourseManagement() {
               <div className="mb-6">
                 <div className="flex justify-between items-center mb-2 text-sm font-medium">
                   <span className="text-slate-500">Completion</span>
-                  <span className="text-slate-500">{course.completion}%</span>
+                  <span className="text-slate-500">{completion}%</span>
                 </div>
                 <div className="w-full bg-slate-100 outline outline-1 outline-slate-200/50 rounded-full h-2">
                   <div
-                    className={`${course.progressColor} h-2 rounded-full`}
-                    style={{ width: `${course.completion}%` }}
+                    className={`bg-blue-500 h-2 rounded-full`}
+                    style={{ width: `${completion}%` }}
                   ></div>
                 </div>
               </div>
@@ -145,19 +127,19 @@ export default function LecturerCourseManagement() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-slate-500 font-medium">
                 <div className="flex items-center gap-2">
                   <span className="text-base text-slate-400">📝</span>{" "}
-                  {course.quizzes} Quizzes
+                  0 Quizzes
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-base text-slate-400">📎</span>{" "}
-                  {course.assignments} Assignments
+                  0 Assignments
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-base text-slate-400">💬</span>{" "}
-                  {course.discussions} Discussions
+                  0 Discussions
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-base text-slate-400">👥</span>{" "}
-                  {course.students} Students
+                  {students} Students
                 </div>
               </div>
             </div>
@@ -175,7 +157,7 @@ export default function LecturerCourseManagement() {
               </button>
             </div>
           </div>
-        ))}
+        )})}
       </div>
     </div>
   );

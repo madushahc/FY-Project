@@ -1,9 +1,26 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '@/lib/api';
 
 export default function AdminReports() {
   const [activeTab, setActiveTab] = useState('Course Performance');
+  const [reportData, setReportData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const res = await api.get('/analytics/admin-reports');
+        setReportData(res.data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, []);
 
   const navItems = [
     { title: 'Engagement Report', desc: 'Student activity & participation', icon: '📊' },
@@ -13,14 +30,9 @@ export default function AdminReports() {
   ];
 
   const renderCoursePerformance = () => {
-    const courses = [
-      { course: 'Web Technologies', dept: 'Computing', lecturer: 'Dr. Silva', enrolled: 45, completion: 91, avgQuiz: '88%', status: 'Published', color: 'bg-emerald-500', text: 'text-emerald-600' },
-      { course: 'Data Structures', dept: 'Computing', lecturer: 'Dr. Rajapaksa', enrolled: 52, completion: 72, avgQuiz: '78%', status: 'Published', color: 'bg-blue-500', text: 'text-blue-600' },
-      { course: 'Business Analytics', dept: 'Business', lecturer: 'Dr. Peris', enrolled: 38, completion: 66, avgQuiz: '74%', status: 'Published', color: 'bg-purple-500', text: 'text-purple-600' },
-      { course: 'Database Mgmt.', dept: 'Computing', lecturer: 'Dr. Rajapaksa', enrolled: 48, completion: 58, avgQuiz: '72%', status: 'Published', color: 'bg-orange-500', text: 'text-orange-600' },
-      { course: 'Software Eng.', dept: 'Computing', lecturer: 'Dr. Rajapaksa', enrolled: 47, completion: 45, avgQuiz: '68%', status: 'Draft', color: 'bg-orange-500', text: 'text-orange-600' },
-      { course: 'Computer Networks', dept: 'Computing', lecturer: 'Dr. Fernando', enrolled: 29, completion: 38, avgQuiz: '65%', status: 'Published', color: 'bg-blue-500', text: 'text-blue-600' },
-    ];
+    if (loading || !reportData) return <div className="p-12 text-center text-slate-500">Loading...</div>;
+    const { courses, metrics } = reportData.coursePerformance;
+
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 flex-1 min-w-0">
         {/* Header */}
@@ -37,23 +49,22 @@ export default function AdminReports() {
            </div>
         </div>
 
-        {/* Metrics */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
              <p className="text-slate-500 text-[9px] font-bold uppercase tracking-wider mb-2">Total Courses</p>
-             <h3 className="text-2xl font-light text-blue-600 mb-1">12</h3><p className="text-emerald-500 text-[10px] font-bold">6 in dev</p>
+             <h3 className="text-2xl font-light text-blue-600 mb-1">{metrics.totalCourses}</h3><p className="text-emerald-500 text-[10px] font-bold">6 in dev</p>
            </div>
            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
              <p className="text-slate-500 text-[9px] font-bold uppercase tracking-wider mb-2">Avg Completion</p>
-             <h3 className="text-2xl font-light text-emerald-500 mb-1">68%</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +6% vs last</p>
+             <h3 className="text-2xl font-light text-emerald-500 mb-1">{metrics.avgCompletion}%</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +6% vs last</p>
            </div>
            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
              <p className="text-slate-500 text-[9px] font-bold uppercase tracking-wider mb-2">Total Enrollments</p>
-             <h3 className="text-2xl font-light text-purple-500 mb-1">396</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +42 this month</p>
+             <h3 className="text-2xl font-light text-purple-500 mb-1">{metrics.totalEnrollments}</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +42 this month</p>
            </div>
            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
              <p className="text-slate-500 text-[9px] font-bold uppercase tracking-wider mb-2">Avg Quiz Score</p>
-             <h3 className="text-2xl font-light text-orange-500 mb-1">78%</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +3%</p>
+             <h3 className="text-2xl font-light text-orange-500 mb-1">{metrics.avgQuizScore}%</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +3%</p>
            </div>
         </div>
 
@@ -115,6 +126,9 @@ export default function AdminReports() {
   };
 
   const renderEngagementReport = () => {
+    if (loading || !reportData) return <div className="p-12 text-center text-slate-500">Loading...</div>;
+    const { metrics, dailyActiveUsers, topLecturers } = reportData.engagement;
+
      return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 flex-1 min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -131,31 +145,26 @@ export default function AdminReports() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
              <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Active Students</p>
-               <h3 className="text-3xl font-bold text-blue-600 mb-1">284</h3><p className="text-emerald-500 text-xs font-bold">▲ 12.4%</p>
+               <h3 className="text-3xl font-bold text-blue-600 mb-1">{metrics.activeStudents}</h3><p className="text-emerald-500 text-xs font-bold">▲ 12.4%</p>
              </div>
              <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Total Logins</p>
-               <h3 className="text-3xl font-bold text-blue-600 mb-1">3,847</h3><p className="text-emerald-500 text-xs font-bold">▲ 8.2%</p>
+               <h3 className="text-3xl font-bold text-blue-600 mb-1">{metrics.totalLogins.toLocaleString()}</h3><p className="text-emerald-500 text-xs font-bold">▲ 8.2%</p>
              </div>
              <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Avg Session</p>
-               <h3 className="text-3xl font-bold text-blue-600 mb-1">24 min</h3><p className="text-emerald-500 text-xs font-bold">▲ 3.1 min</p>
+               <h3 className="text-3xl font-bold text-blue-600 mb-1">{metrics.avgSession} min</h3><p className="text-emerald-500 text-xs font-bold">▲ 3.1 min</p>
              </div>
              <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Completion Rate</p>
-               <h3 className="text-3xl font-bold text-blue-600 mb-1">68%</h3><p className="text-emerald-500 text-xs font-bold">▲ +6%</p>
+               <h3 className="text-3xl font-bold text-blue-600 mb-1">{metrics.completionRate}%</h3><p className="text-emerald-500 text-xs font-bold">▲ +6%</p>
              </div>
           </div>
 
           <div className="bg-white border flex flex-col border-slate-200 rounded-2xl shadow-sm overflow-hidden p-6">
              <h3 className="font-semibold text-slate-800 mb-6">Daily Active Users</h3>
              <div className="flex-1 flex items-end gap-2 h-48 relative">
-               {[
-                 { v: 30, d: 'Jan 18' }, { v: 45, d: '' }, { v: 55, d: '' }, { v: 40, d: '' },
-                 { v: 65, d: 'Jan 20' }, { v: 70, d: '' }, { v: 35, d: '' }, { v: 25, d: 'Jan 22' },
-                 { v: 50, d: '' }, { v: 60, d: '' }, { v: 65, d: '' }, { v: 40, d: 'Jan 24' },
-                 { v: 38, d: '' }, { v: 58, d: '' }
-               ].map((bar, i) => (
+               {dailyActiveUsers.map((bar: any, i: number) => (
                  <div key={i} className="flex-1 flex flex-col justify-end items-center group relative h-full">
                     <div className="w-full bg-blue-500 rounded-t-sm hover:bg-blue-600 transition-colors" style={{ height: `${bar.v}%` }}></div>
                     {bar.d && <span className="absolute -bottom-6 text-[10px] font-medium text-slate-400">{bar.d}</span>}
@@ -181,12 +190,7 @@ export default function AdminReports() {
                      </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {[
-                      { l: 'Dr. Rajapaksa', c: 3, e: '82%', comp: 156, bg: 47 },
-                      { l: 'Dr. Silva', c: 2, e: '76%', comp: 98, bg: 31 },
-                      { l: 'Dr. Kumar', c: 1, e: '91%', comp: 68, bg: 22 },
-                      { l: 'Dr. Peris', c: 2, e: '68%', comp: 74, bg: 18 }
-                    ].map((row, i) => (
+                    {topLecturers.map((row: any, i: number) => (
                        <tr key={i} className="hover:bg-slate-50 transition-colors">
                           <td className="py-4 pl-6 pr-4 font-bold text-slate-800">{row.l}</td>
                           <td className="py-4 px-4 text-slate-600">{row.c}</td>
@@ -213,6 +217,9 @@ export default function AdminReports() {
   };
 
   const renderGamificationReport = () => {
+    if (loading || !reportData) return <div className="p-12 text-center text-slate-500">Loading...</div>;
+    const { metrics, pointsDistribution, recentBadges } = reportData.gamification;
+
      return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 flex-1 min-w-0">
           <div className="flex justify-between">
@@ -227,26 +234,26 @@ export default function AdminReports() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
              <div className="bg-white p-5 rounded-xl border border-slate-100">
                <p className="text-slate-500 text-[9px] font-bold uppercase mb-2">Total Points Awarded</p>
-               <h3 className="text-3xl font-light text-blue-600 mb-1">284,320</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +18,240 this month</p>
+               <h3 className="text-3xl font-light text-blue-600 mb-1">{metrics.totalPoints.toLocaleString()}</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +18,240 this month</p>
              </div>
              <div className="bg-white p-5 rounded-xl border border-slate-100">
                <p className="text-slate-500 text-[9px] font-bold uppercase mb-2">Badges Awarded</p>
-               <h3 className="text-3xl font-light text-orange-500 mb-1">1,247</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +88 this week</p>
+               <h3 className="text-3xl font-light text-orange-500 mb-1">{metrics.badgesAwarded.toLocaleString()}</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +88 this week</p>
              </div>
              <div className="bg-white p-5 rounded-xl border border-slate-100">
                <p className="text-slate-500 text-[9px] font-bold uppercase mb-2">Active Leaderboard Players</p>
-               <h3 className="text-3xl font-light text-emerald-500 mb-1">312</h3><p className="text-emerald-500 text-[10px] font-bold">76% of enrolled students</p>
+               <h3 className="text-3xl font-light text-emerald-500 mb-1">{metrics.activePlayers}</h3><p className="text-emerald-500 text-[10px] font-bold">76% of enrolled students</p>
              </div>
              <div className="bg-white p-5 rounded-xl border border-slate-100">
                <p className="text-slate-500 text-[9px] font-bold uppercase mb-2">Avg XP Per Student</p>
-               <h3 className="text-3xl font-light text-purple-600 mb-1">736</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +124 vs last month</p>
+               <h3 className="text-3xl font-light text-purple-600 mb-1">{metrics.avgXp}</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +124 vs last month</p>
              </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <div className="bg-white border rounded-xl p-5"><h4 className="font-bold mb-4">⭐ Points Distribution by Activity</h4>
                 <div className="space-y-4">
-                   {[{n:'Assignments',p:42,c:'bg-blue-500',t:'text-blue-600'},{n:'Quizzes',p:31,c:'bg-purple-500',t:'text-purple-600'},{n:'Lessons',p:18,c:'bg-emerald-500',t:'text-emerald-600'},{n:'Forum',p:9,c:'bg-orange-500',t:'text-orange-600'}].map(item => (
+                   {pointsDistribution.map((item: any) => (
                       <div key={item.n} className="flex justify-between items-center text-sm">
                          <span className="w-24 text-slate-600">{item.n}</span>
                          <div className="flex-1 mx-4 bg-slate-100 h-2 rounded-full"><div className={`h-2 rounded-full ${item.c}`} style={{width:`${item.p}%`}}></div></div>
@@ -257,7 +264,7 @@ export default function AdminReports() {
              </div>
              <div className="bg-white border rounded-xl p-5"><h4 className="font-bold mb-4">🏅 Badges Awarded This Month</h4>
                 <div className="space-y-3">
-                   {[{n:'Hot Streak 🔥', v:'234 awarded', c:'text-red-500'},{n:'Quiz Champion 🏆', v:'189 awarded', c:'text-orange-500'},{n:'Bookworm 📚', v:'156 awarded', c:'text-emerald-500'},{n:'On Target 🎯', v:'98 awarded', c:'text-teal-500'},{n:'Collaborator 💬', v:'72 awarded', c:'text-purple-500'}].map((b,i) => (
+                   {recentBadges.map((b: any,i: number) => (
                       <div key={i} className="flex justify-between text-sm">
                          <span className="text-slate-600">{b.n}</span><span className={`font-bold ${b.c}`}>{b.v}</span>
                       </div>
@@ -270,6 +277,9 @@ export default function AdminReports() {
   };
 
   const renderUserActivityReport = () => {
+    if (loading || !reportData) return <div className="p-12 text-center text-slate-500">Loading...</div>;
+    const { metrics, users } = reportData.userActivity;
+
     return (
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 flex-1 min-w-0">
           <div className="flex justify-between">
@@ -284,15 +294,15 @@ export default function AdminReports() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
              <div className="bg-white p-5 rounded-xl border border-slate-100">
                <p className="text-slate-500 text-[9px] font-bold uppercase mb-2">Total Users</p>
-               <h3 className="text-3xl font-light text-blue-600 mb-1">416</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +22 this month</p>
+               <h3 className="text-3xl font-light text-blue-600 mb-1">{metrics.totalUsers}</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +22 this month</p>
              </div>
              <div className="bg-white p-5 rounded-xl border border-slate-100">
                <p className="text-slate-500 text-[9px] font-bold uppercase mb-2">Active Users</p>
-               <h3 className="text-3xl font-light text-emerald-500 mb-1">327</h3><p className="text-emerald-500 text-[10px] font-bold">▲ 78.6% of total</p>
+               <h3 className="text-3xl font-light text-emerald-500 mb-1">{metrics.activeUsers}</h3><p className="text-emerald-500 text-[10px] font-bold">▲ 78.6% of total</p>
              </div>
              <div className="bg-white p-5 rounded-xl border border-slate-100">
                <p className="text-slate-500 text-[9px] font-bold uppercase mb-2">Total Logins</p>
-               <h3 className="text-3xl font-light text-purple-600 mb-1">3,847</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +312 this week</p>
+               <h3 className="text-3xl font-light text-purple-600 mb-1">{metrics.totalLogins.toLocaleString()}</h3><p className="text-emerald-500 text-[10px] font-bold">▲ +312 this week</p>
              </div>
           </div>
           
@@ -310,24 +320,14 @@ export default function AdminReports() {
                      <tr><th className="py-3 px-5">User</th><th className="py-3 px-3">Role</th><th className="py-3 px-3">Logins</th><th className="py-3 px-3">Avg Session</th><th className="py-3 px-3">Last Login</th><th className="py-3 px-3">Time Spent</th><th className="py-3 px-3">Status</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                     <tr className="hover:bg-slate-50">
-                        <td className="py-3 px-5"><div className="font-bold text-slate-800">Nimal Silva</div><div className="text-[10px] text-slate-500">n.silva@nsbm.lk</div></td>
-                        <td className="py-3 px-3"><span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold">Student</span></td>
-                        <td className="py-3 px-3 font-bold text-slate-700">28x</td><td className="py-3 px-3 text-slate-600">32 min</td><td className="py-3 px-3 text-emerald-600 font-medium">Today, 9:14 AM</td><td className="py-3 px-3 text-slate-600">14h 22m</td>
-                        <td className="py-3 px-3"><span className="bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full text-xs font-bold">Active</span></td>
-                     </tr>
-                     <tr className="hover:bg-slate-50">
-                        <td className="py-3 px-5"><div className="font-bold text-slate-800">Kavitha Perera</div><div className="text-[10px] text-slate-500">k.perera@nsbm.lk</div></td>
-                        <td className="py-3 px-3"><span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold">Student</span></td>
-                        <td className="py-3 px-3 font-bold text-slate-700">22x</td><td className="py-3 px-3 text-slate-600">24 min</td><td className="py-3 px-3 text-emerald-600 font-medium">Today, 11:02 AM</td><td className="py-3 px-3 text-slate-600">11h 04m</td>
-                        <td className="py-3 px-3"><span className="bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full text-xs font-bold">Active</span></td>
-                     </tr>
-                     <tr className="hover:bg-slate-50">
-                        <td className="py-3 px-5"><div className="font-bold text-slate-800">Dr. Rajapaksa</div><div className="text-[10px] text-slate-500">r.raj@nsbm.lk</div></td>
-                        <td className="py-3 px-3"><span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-bold">Lecturer</span></td>
-                        <td className="py-3 px-3 font-bold text-slate-700">24x</td><td className="py-3 px-3 text-slate-600">42 min</td><td className="py-3 px-3 text-emerald-600 font-medium">Today, 8:30 AM</td><td className="py-3 px-3 text-slate-600">16h 48m</td>
-                        <td className="py-3 px-3"><span className="bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full text-xs font-bold">Active</span></td>
-                     </tr>
+                     {users.map((u: any, i: number) => (
+                        <tr key={i} className="hover:bg-slate-50">
+                           <td className="py-3 px-5"><div className="font-bold text-slate-800">{u.name}</div><div className="text-[10px] text-slate-500">{u.email}</div></td>
+                           <td className="py-3 px-3"><span className={`px-2 py-0.5 rounded text-xs font-bold ${u.role === 'Student' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>{u.role}</span></td>
+                           <td className="py-3 px-3 font-bold text-slate-700">{u.logins}x</td><td className="py-3 px-3 text-slate-600">{u.avgSession}</td><td className="py-3 px-3 text-emerald-600 font-medium">{u.lastLogin}</td><td className="py-3 px-3 text-slate-600">{u.timeSpent}</td>
+                           <td className="py-3 px-3"><span className="bg-emerald-100 text-emerald-600 px-3 py-1 rounded-full text-xs font-bold">{u.status}</span></td>
+                        </tr>
+                     ))}
                   </tbody>
                </table>
              </div>

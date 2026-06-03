@@ -1,21 +1,29 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Bell, Edit3, LogOut, ChevronRight, CheckCircle2, Award, Clock, FileText, Target, BookOpen, MessageSquare } from 'lucide-react';
+import { useUserStore } from '@/store/useUserStore';
+import api from '@/lib/api';
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('Personal Info');
+  const { user, initializeUser } = useUserStore();
+  const [notifications, setNotifications] = useState<any[]>([]);
 
-  const notifications = [
-    { type: 'award', icon: '🏆', title: 'Badge Unlocked — First Champion!', desc: "You've reached the Top 3 on the leaderboard. +120 bonus XP awarded.", time: '2 min ago', xp: '+120', read: false },
-    { type: 'points', icon: '⭐', title: 'Points Awarded — DSA Quiz Complete', desc: 'You scored 90% on Sorting Algorithms Quiz and earned 50 points.', time: '1 hour ago', xp: '+50', read: false },
-    { type: 'grade', icon: '📝', title: 'Assignment Graded — SE Assignment 2', desc: 'Dr. Rajapaksa has graded your UML Class Diagram. Score: 85/100.', time: '3 hours ago', tag: '85/100', read: false },
-    { type: 'enroll', icon: '📚', title: 'Enrollment Confirmed — Web Technologies', desc: "You're now enrolled in CS303 Web Technologies. Classes start Jan 27.", time: 'Yesterday', read: true },
-    { type: 'deadline', icon: '⏰', title: 'Deadline Reminder — DBMS Assignment', desc: 'DBMS Normalization Report is due tomorrow at 11:59 PM. Submit on time for +100 pts.', time: 'Yesterday', tag: 'Due Tomorrow', warning: true, read: true },
-    { type: 'rank', icon: '📈', title: 'Rank Changed — You moved up!', desc: 'Great work! Your leaderboard rank improved from #5 to #3 this week.', time: '2 days ago', tag: '#3 ▲', purple: true, read: true },
-    { type: 'quiz', icon: '📝', title: 'Quiz Result — Binary Trees Quiz', desc: 'You passed with 78%. Review your answers to improve. 40 pts earned.', time: '2 days ago', xp: '+40', read: true },
-    { type: 'announce', icon: '📢', title: 'Announcement — Course Update', desc: 'Dr. Rajapaksa added 3 new lessons to Module 4 of Data Structures.', time: '3 days ago', read: true },
-  ];
+  useEffect(() => {
+    initializeUser();
+    const fetchNotifications = async () => {
+      try {
+        const res = await api.get('/notifications');
+        setNotifications(res.data);
+      } catch (err) {
+        console.error("Failed to load notifications", err);
+      }
+    };
+    fetchNotifications();
+  }, [initializeUser]);
+
+  const initials = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
 
   return (
     <div className="max-w-[1200px] mx-auto space-y-6 pb-20 mt-2 flex flex-col h-full overflow-hidden">
@@ -25,19 +33,19 @@ export default function ProfilePage() {
          <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
          <h1 className="text-xl font-medium opacity-90 relative">Manage your account, preferences and security settings</h1>
          
-         <div className="flex items-end gap-5 relative">
+          <div className="flex items-end gap-5 relative">
             <div className="w-24 h-24 rounded-full bg-[#2A61D8] border-4 border-white flex items-center justify-center text-4xl font-bold shadow-sm z-10 text-white">
-               K
+               {initials}
             </div>
             <div className="mb-2">
-               <h2 className="text-2xl font-bold">Kavitha Perera</h2>
-               <p className="text-blue-100 text-sm mb-2 opacity-90">Student · NSBM Green University</p>
+               <h2 className="text-2xl font-bold">{user?.name || 'Student Name'}</h2>
+               <p className="text-blue-100 text-sm mb-2 opacity-90">{user?.role || 'Student'} · {user?.university || 'University'}</p>
                <div className="flex gap-2 text-xs font-bold">
                   <div className="px-3 py-1 bg-white text-blue-600 rounded-full flex items-center gap-1 shadow-sm">
-                     Level 8 <span>⭐</span>
+                     Level {Math.floor((user?.points || 0) / 200) + 1} <span>⭐</span>
                   </div>
                   <div className="px-3 py-1 bg-orange-100 text-orange-600 rounded-full shadow-sm">
-                     1,840 XP
+                     {user?.points || 0} XP
                   </div>
                </div>
             </div>
@@ -95,19 +103,19 @@ export default function ProfilePage() {
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div className="space-y-2">
                            <label className="text-sm font-bold text-slate-700">Full Name</label>
-                           <input type="text" defaultValue="Kavitha Perera" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                           <input type="text" defaultValue={user?.name || ''} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                         </div>
                         <div className="space-y-2">
                            <label className="text-sm font-bold text-slate-700">Email Address</label>
-                           <input type="email" defaultValue="k.perera@nsbm.lk" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                           <input type="email" defaultValue={user?.email || ''} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                         </div>
                         <div className="space-y-2">
-                           <label className="text-sm font-bold text-slate-700">Index Number</label>
-                           <input type="text" defaultValue="CSC/21/001" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                           <label className="text-sm font-bold text-slate-700">University</label>
+                           <input type="text" defaultValue={user?.university || ''} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                         </div>
                         <div className="space-y-2">
                            <label className="text-sm font-bold text-slate-700">Department</label>
-                           <input type="text" defaultValue="Faculty of Computing" className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                           <input type="text" defaultValue={user?.department || ''} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
                         </div>
                      </div>
 
@@ -149,42 +157,31 @@ export default function ProfilePage() {
             {activeTab === 'Notifications' && (
                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500">
                   <div className="divide-y divide-slate-100">
-                     {notifications.map((notif, idx) => (
-                        <div key={idx} className={`p-5 flex gap-4 hover:bg-slate-50 transition relative ${!notif.read ? 'bg-blue-50/30' : ''}`}>
-                           {!notif.read && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>}
-                           
-                           <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0 bg-slate-100">
-                              {notif.icon}
-                           </div>
-                           
-                           <div className="flex-1">
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
-                                 <h4 className={`text-sm font-bold flex items-center gap-2 ${!notif.read ? 'text-slate-800' : 'text-slate-700'}`}>
-                                    {notif.title}
-                                    {!notif.read && <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>}
-                                 </h4>
-                                 <span className="text-xs text-slate-400 whitespace-nowrap">{notif.time}</span>
+                     {notifications.length === 0 ? (
+                        <div className="p-8 text-center text-slate-500 font-medium">You have no notifications.</div>
+                     ) : (
+                        notifications.map((notif, idx) => (
+                           <div key={idx} className={`p-5 flex gap-4 hover:bg-slate-50 transition relative ${!notif.isRead ? 'bg-blue-50/30' : ''}`}>
+                              {!notif.isRead && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500"></div>}
+                              
+                              <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0 bg-slate-100">
+                                 {notif.type === 'Assignment' ? '📝' : notif.type === 'Quiz' ? '⏳' : notif.type === 'Badge' ? '🏆' : '🔔'}
                               </div>
                               
-                              <p className="text-sm text-slate-600 mb-2 leading-relaxed">{notif.desc}</p>
-                              
-                              {(notif.xp || notif.tag) && (
-                                 <div className="flex gap-2">
-                                    {notif.xp && <span className="px-2.5 py-1 text-[11px] font-bold rounded-full bg-orange-100 text-orange-600">{notif.xp}</span>}
-                                    {notif.tag && (
-                                       <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${
-                                          notif.warning ? 'bg-amber-100 text-amber-700' :
-                                          notif.purple ? 'bg-purple-100 text-purple-700' :
-                                          'bg-emerald-100 text-emerald-700'
-                                       }`}>
-                                          {notif.tag}
-                                       </span>
-                                    )}
+                              <div className="flex-1">
+                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
+                                    <h4 className={`text-sm font-bold flex items-center gap-2 ${!notif.isRead ? 'text-slate-800' : 'text-slate-700'}`}>
+                                       {notif.title}
+                                       {!notif.isRead && <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>}
+                                    </h4>
+                                    <span className="text-xs text-slate-400 whitespace-nowrap">{new Date(notif.createdAt).toLocaleDateString()}</span>
                                  </div>
-                              )}
+                                 
+                                 <p className="text-sm text-slate-600 mb-2 leading-relaxed">{notif.message}</p>
+                              </div>
                            </div>
-                        </div>
-                     ))}
+                        ))
+                     )}
                   </div>
                </div>
             )}

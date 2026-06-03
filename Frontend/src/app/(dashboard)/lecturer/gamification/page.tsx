@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useGamificationStore } from '@/store/useGamificationStore';
+import api from '@/lib/api';
 
 export default function GamificationSettings() {
   const { createBadge, fetchBadges, badges } = useGamificationStore();
@@ -38,7 +39,33 @@ export default function GamificationSettings() {
 
   useEffect(() => {
      fetchBadges();
+     const fetchRules = async () => {
+        try {
+           const res = await api.get('/gamification/rules');
+           if (res.data) {
+              setPointRules({
+                 lesson: res.data.lesson || 10,
+                 quiz: res.data.quiz || 50,
+                 assignment: res.data.assignment || 80,
+                 forum: res.data.forum || 5
+              });
+           }
+        } catch(err) {
+           console.error("Failed to fetch rules", err);
+        }
+     };
+     fetchRules();
   }, [fetchBadges]);
+
+  const handleSaveRules = async () => {
+     try {
+        await api.post('/gamification/rules', pointRules);
+        alert("Point rules saved successfully!");
+     } catch(err) {
+        console.error("Failed to save rules", err);
+        alert("Failed to save point rules.");
+     }
+  };
 
   const handleCreateBadge = async () => {
      if (!newBadge.name || !newBadge.description || !newBadge.icon || !newBadge.triggerEvent) {
@@ -165,7 +192,7 @@ export default function GamificationSettings() {
             </div>
 
             <div className="p-6 pt-0 mt-auto">
-               <button className="w-full bg-blue-600 text-white font-medium rounded-xl py-3 hover:bg-blue-700 transition shadow-sm">
+               <button onClick={handleSaveRules} className="w-full bg-blue-600 text-white font-medium rounded-xl py-3 hover:bg-blue-700 transition shadow-sm">
                   Save Point Rules
                </button>
             </div>

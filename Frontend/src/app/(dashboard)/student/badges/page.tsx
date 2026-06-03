@@ -24,7 +24,6 @@ export default function BadgeGallery() {
   const earnedBadges = badges.filter(b => userBadgeNames.includes(b.name));
   const lockedBadges = badges.filter(b => !userBadgeNames.includes(b.name));
 
-  // Fallback for visual mock if DB is completely empty. We don't want a blank UI.
   const fallbackIconColor = 'bg-blue-500';
 
   return (

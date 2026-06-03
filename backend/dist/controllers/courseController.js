@@ -1,11 +1,17 @@
 import Course from '../models/Course.js';
+import Enrollment from '../models/Enrollment.js';
 // @desc    Get all courses (Published for students, All for admin/lecturers)
 // @route   GET /api/courses
 export const getCourses = async (req, res) => {
     try {
         const filter = req.user?.role === 'Student' ? { status: 'Published' } : {};
-        const courses = await Course.find(filter).populate('instructor', 'name email');
-        res.json(courses);
+        const courses = await Course.find(filter).populate('instructor', 'name email').lean();
+        // Attach enrollment counts
+        const coursesWithCounts = await Promise.all(courses.map(async (c) => {
+            const count = await Enrollment.countDocuments({ course: c._id });
+            return { ...c, enrollmentCount: count };
+        }));
+        res.json(coursesWithCounts);
     }
     catch (error) {
         res.status(500).json({ message: 'Server Error' });
@@ -34,6 +40,19 @@ export const getCourseById = async (req, res) => {
 export const createCourse = async (req, res) => {
     try {
         const courseData = { ...req.body, instructor: req.user?._id };
+        // Parse JSON strings if data came from FormData
+        if (typeof courseData.modules === 'string') {
+            try {
+                courseData.modules = JSON.parse(courseData.modules);
+            }
+            catch (e) { }
+        }
+        if (typeof courseData.completionRules === 'string') {
+            try {
+                courseData.completionRules = JSON.parse(courseData.completionRules);
+            }
+            catch (e) { }
+        }
         // Handle thumbnail upload if exists
         if (req.file) {
             courseData.thumbnailUrl = `/uploads/${req.file.filename}`;
@@ -42,6 +61,7 @@ export const createCourse = async (req, res) => {
         res.status(201).json(course);
     }
     catch (error) {
+        console.error('Create course error:', error);
         res.status(400).json({ message: 'Invalid course data', error });
     }
 };
@@ -61,6 +81,19 @@ export const updateCourse = async (req, res) => {
             return;
         }
         const updateData = { ...req.body };
+        // Parse JSON strings if data came from FormData
+        if (typeof updateData.modules === 'string') {
+            try {
+                updateData.modules = JSON.parse(updateData.modules);
+            }
+            catch (e) { }
+        }
+        if (typeof updateData.completionRules === 'string') {
+            try {
+                updateData.completionRules = JSON.parse(updateData.completionRules);
+            }
+            catch (e) { }
+        }
         if (req.file) {
             updateData.thumbnailUrl = `/uploads/${req.file.filename}`;
         }
@@ -90,6 +123,26 @@ export const deleteCourse = async (req, res) => {
     }
     catch (error) {
         res.status(500).json({ message: 'Server Error' });
+    }
+};
+// @desc    Get all students enrolled in lecturer's courses
+// @route   GET /api/courses/lecturer/students
+// @access  Lecturer
+export const getLecturerStudents = async (req, res) => {
+    try {
+        if (!req.user?._id) {
+            res.status(401).json({ message: 'Not authorized' });
+            return;
+        }
+        const myCourses = await Course.find({ instructor: req.user._id });
+        const courseIds = myCourses.map(c => c._id);
+        const enrollments = await Enrollment.find({ course: { $in: courseIds } })
+            .populate('user', 'name email profilePic')
+            .populate('course', 'title');
+        res.json(enrollments);
+    }
+    catch (error) {
+        res.status(500).json({ message: error.message || 'Server Error' });
     }
 };
 //# sourceMappingURL=courseController.js.map

@@ -1,47 +1,51 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
-import { CourseCard, CourseData } from '@/components/ui/CourseCard';
+import { useCourseStore } from '@/store/useCourseStore';
+import { useRouter } from 'next/navigation';
 
 export default function BrowseCourses() {
+  const { availableCourses, myEnrollments, fetchAvailableCourses, fetchMyEnrollments, enrollInCourse, loading } = useCourseStore();
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [enrollingId, setEnrollingId] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    fetchAvailableCourses();
+    fetchMyEnrollments();
+  }, [fetchAvailableCourses, fetchMyEnrollments]);
 
   // Extended mocked courses based on screenshot layout (9 of 18 courses)
-  const courses = [
-     {
-        id: 'c1', title: 'Data Structures & Algorithms', code: 'CS301 · Computing', 
-        lecturer: 'Dr. Rajapaksa', lessons: 24, students: 52, rating: 4.8, 
-        tag: 'Core', tagColor: 'bg-blue-50 text-blue-600', icon: '💻', isEnrolled: false
-     },
-     {
-        id: 'c2', title: 'Database Management Systems', code: 'CS302 · Computing', 
-        lecturer: 'Dr. Rajapaksa', lessons: 18, students: 48, rating: 4.6, 
-        tag: 'Core', tagColor: 'bg-blue-50 text-blue-600', icon: '🗄️', isEnrolled: true
-     },
-     {
-        id: 'c3', title: 'Web Technologies', code: 'CS303 · Computing', 
-        lecturer: 'Dr. Silva', lessons: 20, students: 45, rating: 4.9, 
-        tag: 'Core', tagColor: 'bg-blue-50 text-blue-600', icon: '🌐', isEnrolled: true
-     },
-     {
-        id: 'c4', title: 'Machine Learning Basics', code: 'CS401 · Computing', 
-        lecturer: 'Dr. Kumar', lessons: 18, students: 32, rating: 4.7, 
-        tag: 'Elective', tagColor: 'bg-orange-50 text-orange-600', icon: '🤖', isEnrolled: false,
-        flag: '✨ New', flagColor: 'bg-blue-600 text-white'
-     },
-     {
-        id: 'c5', title: 'Software Engineering', code: 'CS304 · Computing', 
-        lecturer: 'Dr. Rajapaksa', lessons: 22, students: 47, rating: 4.5, 
-        tag: 'Core', tagColor: 'bg-blue-50 text-blue-600', icon: '⚙️', isEnrolled: true
-     },
-     {
-        id: 'c6', title: 'Business Analytics', code: 'BA201 · Business', 
-        lecturer: 'Dr. Peris', lessons: 16, students: 38, rating: 4.4, 
-        tag: 'Elective', tagColor: 'bg-orange-50 text-orange-600', icon: '📊', isEnrolled: false
-     }
-  ];
+  const isEnrolled = (courseId: string) => myEnrollments.some(e => (e.course._id || e.course) === courseId);
+
+  const handleEnroll = async (courseId: string, currentlyEnrolled: boolean) => {
+    if (currentlyEnrolled) {
+      router.push(`/student/courses/${courseId}`);
+      return; 
+    }
+    setEnrollingId(courseId);
+    try {
+      await enrollInCourse(courseId);
+      router.push(`/student/courses/${courseId}`);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to enroll');
+    }
+    setEnrollingId(null);
+  };
+
+  const filteredCourses = availableCourses.filter(c => {
+    if (activeFilter !== 'All' && activeFilter !== 'All (18)') {
+      // Basic filtering based on status or type if needed. For now, match all.
+    }
+    if (searchQuery) {
+      return c.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+             (c.instructor?.name && c.instructor.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-6 pb-20">
@@ -143,7 +147,7 @@ export default function BrowseCourses() {
         {/* Course Grid */}
         <div className="flex-1">
           <div className="flex justify-between items-center mb-4 text-sm font-medium text-slate-500 border-b border-transparent">
-            <span>Showing 9 of 18 courses</span>
+            <span>Showing {filteredCourses.length} courses</span>
             <div className="flex items-center gap-2">
                <span>Sort:</span>
                <select className="bg-transparent font-semibold text-slate-700 focus:outline-none cursor-pointer">
@@ -153,45 +157,52 @@ export default function BrowseCourses() {
           </div>
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {courses.map(course => (
-               <div key={course.id} className="bg-white border border-slate-200 rounded-[20px] overflow-hidden shadow-sm hover:shadow-md transition group relative flex flex-col">
+            {loading ? (
+              <div className="col-span-full py-12 flex justify-center">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : filteredCourses.map(course => {
+               const enrolled = isEnrolled(course._id);
+               const isSubmitting = enrollingId === course._id;
+               return (
+               <div key={course._id} className="bg-white border border-slate-200 rounded-[20px] overflow-hidden shadow-sm hover:shadow-md transition group relative flex flex-col">
                   
                   {/* Status Flags */}
                   <div className="absolute top-4 left-4 right-4 flex justify-between z-10 pointer-events-none">
-                     {course.isEnrolled && <span className="px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[10px] font-bold tracking-wide">Enrolled</span>}
-                     {!course.isEnrolled && <div></div>}
-                     {course.flag && <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wide ${course.flagColor}`}>{course.flag}</span>}
+                     {enrolled && <span className="px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[10px] font-bold tracking-wide">Enrolled</span>}
                   </div>
 
                   <div className="h-40 bg-slate-50 border-b border-slate-100 flex items-center justify-center text-6xl group-hover:bg-blue-50/30 transition-colors">
-                     {course.icon}
+                     📚
                   </div>
 
                   <div className="p-5 flex flex-col flex-1">
                      <h3 className="font-bold text-slate-800 text-base mb-1 line-clamp-1">{course.title}</h3>
-                     <p className="text-xs font-medium text-slate-400 mb-4">{course.code}</p>
+                     <p className="text-xs font-medium text-slate-400 mb-4 line-clamp-1">{course.description || 'No description'}</p>
 
                      <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-2">
-                        <span className="text-[10px]">👨‍🏫</span> {course.lecturer}
+                        <span className="text-[10px]">👨‍🏫</span> {course.instructor?.name || 'Unknown Instructor'}
                      </div>
                      <div className="flex items-center gap-4 text-xs font-medium text-slate-500 mb-4">
-                        <span className="flex items-center gap-1.5"><span className="text-[10px]">📖</span> {course.lessons} lessons</span>
-                        <span className="flex items-center gap-1.5"><span className="text-[10px]">👥</span> {course.students} students</span>
+                        <span className="flex items-center gap-1.5"><span className="text-[10px]">📖</span> {course.modules?.length || 0} modules</span>
                      </div>
 
                      <div className="flex items-center justify-between mb-5">
-                        <span className="text-sm font-bold text-yellow-500">⭐ {course.rating.toFixed(1)}</span>
-                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${course.tagColor}`}>{course.tag}</span>
+                        <span className="text-sm font-bold text-yellow-500">⭐ 4.5</span>
+                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-50 text-blue-600`}>Core</span>
                      </div>
 
                      <div className="mt-auto">
-                        <button className={`w-full py-2.5 rounded-xl text-sm font-bold transition shadow-sm ${course.isEnrolled ? 'bg-white border border-blue-200 text-blue-600 hover:bg-blue-50' : 'bg-blue-600 border border-transparent text-white hover:bg-blue-700'}`}>
-                           {course.isEnrolled ? 'Continue Learning →' : 'Enroll Now →'}
+                        <button 
+                           onClick={() => handleEnroll(course._id, enrolled)}
+                           disabled={isSubmitting}
+                           className={`w-full py-2.5 rounded-xl text-sm font-bold transition shadow-sm disabled:opacity-50 ${enrolled ? 'bg-white border border-blue-200 text-blue-600 hover:bg-blue-50' : 'bg-blue-600 border border-transparent text-white hover:bg-blue-700'}`}>
+                           {isSubmitting ? 'Enrolling...' : enrolled ? 'Continue Learning →' : 'Enroll Now →'}
                         </button>
                      </div>
                   </div>
                </div>
-            ))}
+            )})}
           </div>
         </div>
       </div>

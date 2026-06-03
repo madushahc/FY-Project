@@ -116,3 +116,31 @@ export const getMySubmissions = async (req: AuthRequest, res: Response): Promise
     res.status(500).json({ message: 'Server Error' });
   }
 };
+
+// @desc    Get aggregate stats for an activity (e.g. total submissions, average score)
+// @route   GET /api/submissions/stats/:assignmentId
+// @access  Lecturer, Admin
+export const getActivityStats = async (req: Request, res: Response): Promise<void> => {
+   try {
+      const submissions = await Submission.find({ assignment: req.params.assignmentId as any } as any);
+      const total = submissions.length;
+      let graded = 0;
+      let sum = 0;
+      
+      for (const sub of submissions) {
+         if (sub.status === 'Graded' && sub.score !== undefined) {
+            graded++;
+            sum += sub.score;
+         }
+      }
+      
+      const avgScore = graded > 0 ? sum / graded : 0;
+      
+      res.json({
+         totalSubmissions: total,
+         averageScore: Math.round(avgScore)
+      });
+   } catch (error) {
+      res.status(500).json({ message: 'Server Error' });
+   }
+};

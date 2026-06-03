@@ -1,24 +1,34 @@
-import React from 'react';
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import api from '@/lib/api';
 
 export default function AdminDashboard() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+     const fetchAnalytics = async () => {
+        try {
+           const res = await api.get('/analytics/admin-reports');
+           setData(res.data);
+        } catch (err) {
+           console.error("Failed to load analytics", err);
+        }
+        setLoading(false);
+     };
+     fetchAnalytics();
+  }, []);
+
   // Chart data height percentages and specific colors from the image
-  const chartData = [
-    { h: '60%', color: 'bg-blue-500' },
-    { h: '70%', color: 'bg-emerald-500' },
-    { h: '75%', color: 'bg-blue-500' },
-    { h: '65%', color: 'bg-indigo-400' },
-    { h: '80%', color: 'bg-emerald-500' },
-    { h: '55%', color: 'bg-blue-500' },
-    { h: '68%', color: 'bg-orange-400' },
-    { h: '60%', color: 'bg-blue-500' },
-    { h: '72%', color: 'bg-emerald-500' },
-    { h: '78%', color: 'bg-blue-500' },
-    { h: '65%', color: 'bg-indigo-400' },
-    { h: '82%', color: 'bg-emerald-500' },
-    { h: '55%', color: 'bg-blue-500' },
-    { h: '18%', color: 'bg-orange-400' },
-    { h: '80%', color: 'bg-emerald-500' },
-  ];
+  const chartData = data?.engagement?.dailyActiveUsers?.map((d: any, idx: number) => {
+     const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-indigo-400', 'bg-orange-400'];
+     return { h: `${d.v}%`, color: colors[idx % colors.length] };
+  }) || [];
+
+  if (loading) {
+     return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -34,13 +44,13 @@ export default function AdminDashboard() {
 
           <div className="flex flex-wrap gap-3">
             <div className="bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-              👥 412 Users
+              👥 {data?.userActivity?.metrics?.totalUsers || 0} Users
             </div>
             <div className="bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-              📚 18 Courses
+              📚 {data?.coursePerformance?.metrics?.totalCourses || 0} Courses
             </div>
             <div className="bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-              ⚡ 78% Engagement
+              ⚡ {data?.engagement?.metrics?.completionRate || 0}% Engagement
             </div>
           </div>
         </div>
@@ -50,28 +60,28 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Total Students</p>
-          <h3 className="text-3xl font-light text-blue-500 mb-2">384</h3>
+          <h3 className="text-3xl font-light text-blue-500 mb-2">{data?.userActivity?.metrics?.totalUsers || 0}</h3>
           <p className="text-emerald-500 text-xs font-medium flex items-center gap-1">
             <span className="text-[10px]">▲</span> 22 this month
           </p>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Total Lecturers</p>
-          <h3 className="text-3xl font-light text-purple-500 mb-2">28</h3>
+          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Active Users</p>
+          <h3 className="text-3xl font-light text-purple-500 mb-2">{data?.userActivity?.metrics?.activeUsers || 0}</h3>
           <p className="text-emerald-500 text-xs font-medium flex items-center gap-1">
             <span className="text-[10px]">▲</span> 3 new
           </p>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Active Courses</p>
-          <h3 className="text-3xl font-light text-emerald-500 mb-2">18</h3>
+          <h3 className="text-3xl font-light text-emerald-500 mb-2">{data?.coursePerformance?.metrics?.totalCourses || 0}</h3>
           <p className="text-emerald-400 text-xs font-medium">
             6 in development
           </p>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Platform Engagement</p>
-          <h3 className="text-3xl font-light text-orange-400 mb-2">78%</h3>
+          <h3 className="text-3xl font-light text-orange-400 mb-2">{data?.engagement?.metrics?.completionRate || 0}%</h3>
           <p className="text-emerald-500 text-xs font-medium flex items-center gap-1">
             <span className="text-[10px]">▲</span> +5% this month
           </p>

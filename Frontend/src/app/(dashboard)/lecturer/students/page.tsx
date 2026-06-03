@@ -1,15 +1,55 @@
-import React from 'react';
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
+import api from '@/lib/api';
 
 export default function LecturerStudents() {
-  const students = [
-    { id: 1, name: 'Nimal Silva', pts: '2340', email: 'n.silva@uni.lk', courses: 3, score: '2,340', completion: 95, login: 'Today', status: 'Active', initial: 'N' },
-    { id: 2, name: 'Kavitha Perera', pts: '1840', email: 'k.perera@uni.lk', courses: 4, score: '1,840', completion: 78, login: 'Today', status: 'Active', initial: 'K' },
-    { id: 3, name: 'Suresh Bandara', pts: '2180', email: 's.bandara@uni.lk', courses: 3, score: '2,180', completion: 82, login: 'Yesterday', status: 'Active', initial: 'S' },
-    { id: 4, name: 'Amali Fernando', pts: '720', email: 'a.fernando@uni.lk', courses: 2, score: '720', completion: 35, login: '2 days ago', status: 'At Risk', initial: 'A' },
-    { id: 5, name: 'Dilshan Jayasena', pts: '1650', email: 'd.jayasena@uni.lk', courses: 3, score: '1,650', completion: 68, login: 'Yesterday', status: 'Active', initial: 'D' },
-    { id: 6, name: 'Priya Wickramasinghe', pts: '1540', email: 'p.wick@uni.lk', courses: 2, score: '1,540', completion: 71, login: '3 days ago', status: 'Active', initial: 'P' },
-  ];
+  const [students, setStudents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+     const fetchStudents = async () => {
+        try {
+           const res = await api.get('/courses/lecturer/students');
+           
+           // group by user to prevent duplicates if a user is in multiple courses
+           const userMap = new Map();
+           res.data.forEach((enrollment: any) => {
+              const u = enrollment.user;
+              if (!u) return;
+              if (!userMap.has(u._id)) {
+                 userMap.set(u._id, {
+                    id: u._id,
+                    name: u.name,
+                    email: u.email,
+                    pts: u.points || 0,
+                    courses: 1,
+                    completion: enrollment.progress || 0,
+                    login: 'Active',
+                    status: 'Active',
+                    initial: u.name?.charAt(0).toUpperCase() || 'U'
+                 });
+              } else {
+                 const existing = userMap.get(u._id);
+                 existing.courses += 1;
+                 existing.completion = Math.round((existing.completion + (enrollment.progress || 0)) / 2);
+                 userMap.set(u._id, existing);
+              }
+           });
+           
+           setStudents(Array.from(userMap.values()));
+        } catch(err) {
+           console.error("Failed to fetch students", err);
+        }
+        setLoading(false);
+     };
+     fetchStudents();
+  }, []);
+
+  const activeStudents = students.filter(s => s.status === 'Active').length;
+  const atRiskStudents = students.filter(s => s.completion < 40).length;
+  const avgScore = students.length > 0 ? Math.round(students.reduce((acc, s) => acc + s.completion, 0) / students.length) : 0;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -40,23 +80,32 @@ export default function LecturerStudents() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Total Students</p>
-          <h3 className="text-3xl font-light text-blue-600">52</h3>
+          <h3 className="text-3xl font-light text-blue-600">{students.length}</h3>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Active Today</p>
-          <h3 className="text-3xl font-light text-emerald-500">18</h3>
+          <h3 className="text-3xl font-light text-emerald-500">{activeStudents}</h3>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">At Risk</p>
-          <h3 className="text-3xl font-light text-red-500">7</h3>
+          <h3 className="text-3xl font-light text-red-500">{atRiskStudents}</h3>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Avg Score</p>
-          <h3 className="text-3xl font-light text-purple-500">79%</h3>
+          <h3 className="text-3xl font-light text-purple-500">{avgScore}%</h3>
         </div>
       </div>
 
       {/* Student Table */}
+      {loading ? (
+         <div className="flex justify-center items-center py-12">
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+         </div>
+      ) : students.length === 0 ? (
+         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-12 text-center text-slate-500">
+            No students are currently enrolled in your courses.
+         </div>
+      ) : (
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden overflow-x-auto">
          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
@@ -122,6 +171,7 @@ export default function LecturerStudents() {
             </tbody>
          </table>
       </div>
+      )}
     </div>
   );
 }

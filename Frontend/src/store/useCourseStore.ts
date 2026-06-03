@@ -9,6 +9,7 @@ interface Course {
   status: string;
   instructor?: { name: string; email: string };
   modules?: any[];
+  enrollmentCount?: number;
 }
 
 interface Enrollment {
@@ -29,6 +30,7 @@ interface CourseState {
   myEnrollments: Enrollment[]; // Student's enrollments
   availableCourses: Course[]; // All published courses for students to browse
   analytics: Analytics | null;
+  activeCourse: Course | null;
   loading: boolean;
   error: string | null;
   
@@ -38,6 +40,9 @@ interface CourseState {
   enrollInCourse: (courseId: string) => Promise<void>;
   createCourse: (data: any) => Promise<void>;
   updateCourse: (id: string, data: any) => Promise<void>;
+  uploadFile: (file: File) => Promise<string>;
+  fetchCourseById: (id: string) => Promise<void>;
+  markLessonCompleted: (courseId: string, lessonId: string) => Promise<void>;
 }
 
 export const useCourseStore = create<CourseState>((set, get) => ({
@@ -45,6 +50,7 @@ export const useCourseStore = create<CourseState>((set, get) => ({
   myEnrollments: [],
   availableCourses: [],
   analytics: null, // Hardcoded for now unless backend provides specific analytics API
+  activeCourse: null,
   loading: false,
   error: null,
 
@@ -95,11 +101,7 @@ export const useCourseStore = create<CourseState>((set, get) => ({
   createCourse: async (data: any) => {
     set({ loading: true, error: null });
     try {
-      await api.post('/courses', data, {
-        headers: {
-          'Content-Type': data instanceof FormData ? 'multipart/form-data' : 'application/json'
-        }
-      });
+      await api.post('/courses', data);
       await get().fetchMyCreatedCourses();
     } catch (error: any) {
       set({ error: error.response?.data?.message || error.message, loading: false });
@@ -110,15 +112,46 @@ export const useCourseStore = create<CourseState>((set, get) => ({
   updateCourse: async (id: string, data: any) => {
     set({ loading: true, error: null });
     try {
-      await api.put(`/courses/${id}`, data, {
-        headers: {
-          'Content-Type': data instanceof FormData ? 'multipart/form-data' : 'application/json'
-        }
-      });
+      await api.put(`/courses/${id}`, data);
       await get().fetchMyCreatedCourses();
     } catch (error: any) {
       set({ error: error.response?.data?.message || error.message, loading: false });
       throw error;
+    }
+  },
+
+  uploadFile: async (file: File): Promise<string> => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await api.post('/upload', formData);
+      return response.data.url;
+    } catch (error: any) {
+      console.error('File upload failed', error);
+      throw error;
+    }
+  },
+
+  fetchCourseById: async (id: string) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await api.get(`/courses/${id}`);
+      set({ activeCourse: response.data, loading: false });
+    } catch (error: any) {
+      set({ error: error.response?.data?.message || error.message, loading: false });
+    }
+  },
+
+  markLessonCompleted: async (courseId: string, lessonId: string) => {
+    try {
+      const { myEnrollments } = get();
+      const enrollment = myEnrollments.find(e => (e.course as any)._id === courseId || e.course === courseId as any);
+      if (!enrollment) return;
+      
+      await api.patch(`/enrollments/${enrollment._id}/progress`, { completedLessonId: lessonId });
+      await get().fetchMyEnrollments(); // Refetch to get updated progress/completedLessons
+    } catch (error) {
+      console.error("Failed to mark lesson completed", error);
     }
   }
 }));

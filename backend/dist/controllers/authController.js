@@ -11,7 +11,9 @@ export const registerUser = async (req, res) => {
     const normalizedFirstName = String(firstName || "").trim();
     const normalizedLastName = String(lastName || "").trim();
     const normalizedName = String(name || `${normalizedFirstName} ${normalizedLastName}`).trim();
-    const normalizedEmail = String(email || "").trim().toLowerCase();
+    const normalizedEmail = String(email || "")
+        .trim()
+        .toLowerCase();
     const normalizedUniversity = String(university || "").trim();
     const normalizedDepartment = String(department || "").trim();
     if (!normalizedFirstName ||

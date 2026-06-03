@@ -46,18 +46,26 @@ export default function LecturerActivities() {
 
                // 2) Fetch Assignments
                const assignRes = await api.get(`/assignments/course/${course._id}`);
-               const courseAssignments = assignRes.data.map((a: any) => ({
-                  id: `assn_${a._id}`,
-                  title: a.title,
-                  type: 'Assignment',
-                  course: course.title,
-                  points: `+${a.totalPoints || 0}`,
-                  due: new Date(a.deadline).toLocaleDateString(),
-                  subs: 'N/A', // Endpoint required to fetch sub counts
-                  status: new Date(a.deadline) > new Date() ? 'Active' : 'Past Due',
-                  typeColor: 'bg-orange-50 text-orange-600',
-                  statusColor: new Date(a.deadline) > new Date() ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600',
-                  rawDate: a.createdAt
+               const courseAssignments = await Promise.all(assignRes.data.map(async (a: any) => {
+                  let subs = '0';
+                  try {
+                     const statsRes = await api.get(`/submissions/stats/${a._id}`);
+                     subs = `${statsRes.data.totalSubmissions} (${statsRes.data.averageScore}%)`;
+                  } catch(e) {}
+                  
+                  return {
+                     id: `assn_${a._id}`,
+                     title: a.title,
+                     type: 'Assignment',
+                     course: course.title,
+                     points: `+${a.totalPoints || 0}`,
+                     due: new Date(a.deadline).toLocaleDateString(),
+                     subs: subs, // Dynamic subs and avg score
+                     status: new Date(a.deadline) > new Date() ? 'Active' : 'Past Due',
+                     typeColor: 'bg-orange-50 text-orange-600',
+                     statusColor: new Date(a.deadline) > new Date() ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600',
+                     rawDate: a.createdAt
+                  };
                }));
 
                compiledFeed = [...compiledFeed, ...courseQuizzes, ...courseAssignments];
@@ -112,15 +120,37 @@ export default function LecturerActivities() {
                <h3 className="text-3xl font-light text-blue-500 mb-1">{activities.length}</h3>
                <p className="text-blue-500 text-xs font-semibold">assignments & quizzes</p>
             </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 opacity-60">
-               <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Submissions (Local)</p>
-               <h3 className="text-3xl font-light text-slate-500 mb-1">--</h3>
-               <p className="text-slate-500 text-xs font-semibold">Endpoint required</p>
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+               <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Submissions (Total)</p>
+               <h3 className="text-3xl font-light text-blue-600 mb-1">
+                  {activities.reduce((acc, a) => {
+                     if (a.type === 'Assignment' && a.subs && a.subs !== 'N/A') {
+                        return acc + parseInt(a.subs.split(' ')[0]);
+                     }
+                     return acc;
+                  }, 0)}
+               </h3>
+               <p className="text-blue-500 text-xs font-semibold">assignments submitted</p>
             </div>
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 opacity-60">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Avg Score</p>
-               <h3 className="text-3xl font-light text-slate-500 mb-1">--%</h3>
-               <p className="text-slate-500 text-xs font-semibold">Endpoint required</p>
+               <h3 className="text-3xl font-light text-emerald-500 mb-1">
+                  {(() => {
+                     let totalAvg = 0;
+                     let count = 0;
+                     activities.forEach(a => {
+                        if (a.type === 'Assignment' && a.subs && a.subs !== 'N/A') {
+                           const match = a.subs.match(/\((\d+)%\)/);
+                           if (match) {
+                              totalAvg += parseInt(match[1]);
+                              count++;
+                           }
+                        }
+                     });
+                     return count > 0 ? `${Math.round(totalAvg / count)}%` : '--%';
+                  })()}
+               </h3>
+               <p className="text-emerald-500 text-xs font-semibold">across all assignments</p>
             </div>
          </div>
 

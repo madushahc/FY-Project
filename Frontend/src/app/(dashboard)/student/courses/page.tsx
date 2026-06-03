@@ -3,91 +3,38 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { CourseCard, CourseData } from '@/components/ui/CourseCard';
+import { useCourseStore } from '@/store/useCourseStore';
 
 export default function MyCourses() {
   const [activeTab, setActiveTab] = useState('All Courses');
 
-  // Static mock data based on the screenshot
-  const courses: CourseData[] = [
-    {
-      id: '1',
-      title: 'Data Structures & Algorithms',
-      code: 'CS301',
-      department: 'Computing',
-      lecturer: '',
-      lessons: 24,
-      quizzes: 6,
-      progress: 78,
-      emoji: '💻',
-      colorType: 'blue',
-      status: 'enrolled',
-    },
-    {
-      id: '2',
-      title: 'Database Management Systems',
-      code: 'CS302',
-      department: 'Computing',
-      lecturer: '',
-      lessons: 18,
-      quizzes: 4,
-      progress: 55,
-      emoji: '🗄️',
-      colorType: 'emerald',
-      status: 'enrolled',
-    },
-    {
-      id: '3',
-      title: 'Web Technologies',
-      code: 'CS303',
-      department: 'Computing',
-      lecturer: '',
-      lessons: 20,
-      quizzes: 5,
-      progress: 92,
-      emoji: '🌐',
-      colorType: 'purple',
-      status: 'enrolled',
-    },
-    {
-      id: '4',
-      title: 'Software Engineering',
-      code: 'CS304',
-      department: 'Computing',
-      lecturer: '',
-      lessons: 22,
-      quizzes: 3,
-      progress: 34,
-      emoji: '⚙️',
-      colorType: 'orange',
-      status: 'enrolled',
-    },
-    {
-      id: '5',
-      title: 'Computer Networks',
-      code: 'CS305',
-      department: 'Computing',
-      lecturer: '',
-      lessons: 16,
-      quizzes: 4,
-      tags: ['New'],
-      emoji: '🌐',
-      colorType: 'blue',
-      status: 'available',
-    },
-    {
-      id: '6',
-      title: 'Operating Systems',
-      code: 'CS306',
-      department: 'Computing',
-      lecturer: '',
-      lessons: 20,
-      quizzes: 5,
-      tags: ['New'],
-      emoji: '🖥️',
-      colorType: 'emerald',
-      status: 'available',
-    },
-  ];
+  const { myEnrollments, fetchMyEnrollments, loading } = useCourseStore();
+
+  React.useEffect(() => {
+    fetchMyEnrollments();
+  }, [fetchMyEnrollments]);
+
+  const colors: ('blue' | 'emerald' | 'purple' | 'orange' | 'teal' | 'pink')[] = ['blue', 'emerald', 'purple', 'orange', 'teal', 'pink'];
+
+  const mappedCourses: CourseData[] = myEnrollments.map((e, index) => ({
+    id: e.course._id || (e.course as any),
+    title: e.course.title || 'Unknown Course',
+    code: 'CS' + (300 + index),
+    department: 'Computing',
+    lecturer: e.course.instructor?.name || 'Instructor',
+    lessons: e.course.modules?.reduce((acc: number, m: any) => acc + (m.lessons?.length || 0), 0) || 0,
+    quizzes: 0,
+    progress: e.progress || 0,
+    emoji: '📚',
+    colorType: colors[index % colors.length],
+    status: e.progress === 100 ? 'completed' : 'enrolled',
+  }));
+
+  const displayCourses = mappedCourses.filter(c => {
+    if (activeTab === 'In Progress') return c.status === 'enrolled';
+    if (activeTab === 'Completed') return c.status === 'completed';
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -119,13 +66,21 @@ export default function MyCourses() {
 
       <div className="pt-2">
         <div className="inline-block px-3 py-1 bg-blue-50 text-blue-600 font-bold text-xs rounded-full mb-6">
-          6 courses
+          {displayCourses.length} courses
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {courses.map(course => (
-            <CourseCard key={course.id} course={course} />
-          ))}
+          {loading ? (
+             <div className="col-span-full py-12 flex justify-center">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+             </div>
+          ) : displayCourses.length === 0 ? (
+             <div className="col-span-full py-12 text-center text-slate-500">No courses found.</div>
+          ) : (
+             displayCourses.map(course => (
+               <CourseCard key={course.id} course={course} />
+             ))
+          )}
         </div>
       </div>
     </div>
