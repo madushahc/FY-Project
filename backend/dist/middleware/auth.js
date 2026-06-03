@@ -31,7 +31,12 @@ export const authorize = (...roles) => {
             });
             return;
         }
-        if (roles.length > 0 && !roles.includes(req.user.role)) {
+        const userRole = String(req.user.role || "")
+            .trim()
+            .toLowerCase();
+        const allowedRoles = roles.map((role) => String(role).trim().toLowerCase());
+        if (roles.length > 0 && !allowedRoles.includes(userRole)) {
+            console.log(`Authorize middleware failed: User role is ${req.user.role}, required roles: ${roles.join(", ")}`);
             res.status(403).json({
                 message: `Role ${req.user.role} is not authorized to access this route`,
             });

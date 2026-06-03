@@ -1,6 +1,7 @@
 import express from 'express';
-import { getUsers } from '../controllers/userController.js';
+import { getUsers, updateProfile } from '../controllers/userController.js';
 import { protect, authorize } from '../middleware/auth.js';
+import { upload } from '../middleware/upload.js';
 const router = express.Router();
 /**
  * @swagger
@@ -25,5 +26,6 @@ const router = express.Router();
  *         description: Forbidden
  */
 router.get('/', protect, authorize('Admin'), getUsers);
+router.put('/profile', protect, upload.single('profilePhoto'), updateProfile);
 export default router;
 //# sourceMappingURL=userRoutes.js.map

@@ -8,8 +8,14 @@ export interface IUser extends Document {
     passwordHash: string;
     university: string;
     department: string;
+    phoneNumber?: string;
+    jobTitle?: string;
+    location?: string;
+    website?: string;
     points: number;
     badges: string[];
+    bio?: string;
+    profilePhoto?: string;
 }
 declare const _default: mongoose.Model<IUser, {}, {}, {}, mongoose.Document<unknown, {}, IUser, {}, mongoose.DefaultSchemaOptions> & IUser & Required<{
     _id: mongoose.Types.ObjectId;

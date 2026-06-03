@@ -4,8 +4,28 @@ import React, { useEffect } from "react";
 import Link from "next/link";
 import { useCourseStore } from "@/store/useCourseStore";
 
+import { Trash2 } from "lucide-react";
+
 export default function LecturerCourseManagement() {
-  const { myCourses, fetchMyCreatedCourses, loading } = useCourseStore();
+  const { myCourses, fetchMyCreatedCourses, loading, updateCourse, deleteCourse } = useCourseStore();
+
+  const handlePublish = async (courseId: string) => {
+    try {
+      await updateCourse(courseId, { status: "Published" });
+    } catch (error) {
+      console.error("Failed to publish course", error);
+    }
+  };
+
+  const handleDelete = async (courseId: string) => {
+    if (confirm("Are you sure you want to delete this course?")) {
+      try {
+        await deleteCourse(courseId);
+      } catch (error) {
+        console.error("Failed to delete course", error);
+      }
+    }
+  };
 
   useEffect(() => {
     fetchMyCreatedCourses();
@@ -94,11 +114,17 @@ export default function LecturerCourseManagement() {
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <button className="px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition">
+                  <Link 
+                    href={`/lecturer/courses/${course._id}/edit`}
+                    className="px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition"
+                  >
                     Edit Course
-                  </button>
+                  </Link>
                   {course.status !== "Published" ? (
-                    <button className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow-sm">
+                    <button 
+                      onClick={() => handlePublish(course._id)}
+                      className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow-sm"
+                    >
                       Publish
                     </button>
                   ) : (
@@ -106,6 +132,13 @@ export default function LecturerCourseManagement() {
                       Analytics
                     </button>
                   )}
+                  <button 
+                    onClick={() => handleDelete(course._id)}
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
+                    title="Delete Course"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
 

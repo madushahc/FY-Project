@@ -6,6 +6,24 @@ const generateToken = (id) => {
         expiresIn: "30d",
     });
 };
+const buildUserResponse = (user) => ({
+    _id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    university: user.university,
+    department: user.department,
+    phoneNumber: user.phoneNumber,
+    jobTitle: user.jobTitle,
+    location: user.location,
+    website: user.website,
+    points: user.points,
+    badges: user.badges,
+    bio: user.bio,
+    profilePhoto: user.profilePhoto,
+});
 export const registerUser = async (req, res) => {
     const { role, firstName, lastName, name, email, password, university, department, } = req.body;
     const normalizedFirstName = String(firstName || "").trim();
@@ -46,12 +64,7 @@ export const registerUser = async (req, res) => {
         });
         if (user) {
             res.status(201).json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                department: user.department,
-                university: user.university,
+                ...buildUserResponse(user),
                 token: generateToken(user._id),
             });
         }
@@ -66,17 +79,24 @@ export const registerUser = async (req, res) => {
     }
 };
 export const loginUser = async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
     try {
         const user = await User.findOne({ email });
         if (user && (await bcrypt.compare(password, user.passwordHash))) {
+            const requestedRole = String(role || "")
+                .trim()
+                .toLowerCase();
+            const actualRole = String(user.role || "")
+                .trim()
+                .toLowerCase();
+            if (requestedRole && requestedRole !== actualRole) {
+                res.status(403).json({
+                    message: `This account is registered as ${user.role}, not ${role}`,
+                });
+                return;
+            }
             res.json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                university: user.university,
-                department: user.department,
+                ...buildUserResponse(user),
                 token: generateToken(user._id),
             });
         }

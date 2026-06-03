@@ -23,6 +23,19 @@ export default function NewCourseWizard() {
   ]);
   const [activeModuleIdx, setActiveModuleIdx] = useState(0);
 
+  // Settings State
+  const [enrollmentType, setEnrollmentType] = useState<'Open' | 'Restricted'>('Open');
+  const [status, setStatus] = useState<'Published' | 'Draft'>('Draft');
+  const [minLessonWatchPercent, setMinLessonWatchPercent] = useState(80);
+  const [minQuizPassScore, setMinQuizPassScore] = useState(60);
+
+  // Gamification Defaults
+  const [pointDefaults, setPointDefaults] = useState({
+    lesson: 10,
+    quiz: 50,
+    assignment: 80,
+  });
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'video' | 'quiz' | 'assignment' | 'reading' | 'link'>('video');
@@ -63,7 +76,7 @@ export default function NewCourseWizard() {
       title: lessonTitle,
       type: modalType,
       contentUrl: finalUrl,
-      points: modalType === 'quiz' ? 50 : 10
+      points: modalType === 'quiz' ? pointDefaults.quiz : modalType === 'assignment' ? pointDefaults.assignment : pointDefaults.lesson
     };
 
     const updatedModules = [...modules];
@@ -88,7 +101,13 @@ export default function NewCourseWizard() {
       formData.append('title', title || 'Untitled Course');
       formData.append('code', code || 'C' + Math.floor(Math.random() * 10000));
       formData.append('description', description || 'No description provided.');
-      formData.append('status', 'Published');
+      formData.append('status', status);
+      formData.append('enrollmentType', enrollmentType);
+      formData.append('completionRules', JSON.stringify({
+        minLessonWatchPercent,
+        minQuizPassScore,
+        requireAllAssignments: true
+      }));
       formData.append('modules', JSON.stringify(modules));
       
       if (thumbnailFile) {
@@ -346,17 +365,23 @@ export default function NewCourseWizard() {
                <div className="space-y-4">
                   <h4 className="text-sm font-bold text-slate-700">Enrollment Type</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div className="border border-blue-500 bg-blue-50/30 rounded-xl p-4 flex items-start gap-3 cursor-pointer">
-                        <div className="w-5 h-5 rounded-full border-[5px] border-blue-500 bg-white shrink-0 mt-0.5"></div>
+                     <div 
+                        className={`border ${enrollmentType === 'Open' ? 'border-blue-500 bg-blue-50/30' : 'border-slate-200 bg-white hover:bg-slate-50'} rounded-xl p-4 flex items-start gap-3 cursor-pointer`}
+                        onClick={() => setEnrollmentType('Open')}
+                     >
+                        <div className={`w-5 h-5 rounded-full ${enrollmentType === 'Open' ? 'border-[5px] border-blue-500 bg-white' : 'border-2 border-slate-200 bg-white'} shrink-0 mt-0.5`}></div>
                         <div>
-                           <h5 className="font-bold text-blue-700 text-sm">Open Enrollment</h5>
+                           <h5 className={`font-bold ${enrollmentType === 'Open' ? 'text-blue-700' : 'text-slate-700'} text-sm`}>Open Enrollment</h5>
                            <p className="text-xs text-slate-400 mt-1 font-medium">Any student can self-enroll</p>
                         </div>
                      </div>
-                     <div className="border border-slate-200 bg-white rounded-xl p-4 flex items-start gap-3 cursor-pointer hover:bg-slate-50 transition">
-                        <div className="w-5 h-5 rounded-full border-2 border-slate-200 bg-white shrink-0 mt-0.5"></div>
+                     <div 
+                        className={`border ${enrollmentType === 'Restricted' ? 'border-blue-500 bg-blue-50/30' : 'border-slate-200 bg-white hover:bg-slate-50'} rounded-xl p-4 flex items-start gap-3 cursor-pointer transition`}
+                        onClick={() => setEnrollmentType('Restricted')}
+                     >
+                        <div className={`w-5 h-5 rounded-full ${enrollmentType === 'Restricted' ? 'border-[5px] border-blue-500 bg-white' : 'border-2 border-slate-200 bg-white'} shrink-0 mt-0.5`}></div>
                         <div>
-                           <h5 className="font-bold text-slate-700 text-sm">Restricted</h5>
+                           <h5 className={`font-bold ${enrollmentType === 'Restricted' ? 'text-blue-700' : 'text-slate-700'} text-sm`}>Restricted</h5>
                            <p className="text-xs text-slate-400 mt-1 font-medium">Lecturer approves each student</p>
                         </div>
                      </div>
@@ -368,12 +393,45 @@ export default function NewCourseWizard() {
                <div className="space-y-4 mb-4">
                   <h4 className="text-sm font-bold text-slate-700">Course Visibility</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div className="border border-blue-400 bg-blue-50/20 rounded-xl p-4 flex items-start gap-3 cursor-pointer">
+                     <div 
+                        className={`border ${status === 'Published' ? 'border-blue-400 bg-blue-50/20' : 'border-slate-200 bg-white hover:bg-slate-50'} rounded-xl p-4 flex items-start gap-3 cursor-pointer`}
+                        onClick={() => setStatus('Published')}
+                     >
                         <div className="text-lg shrink-0 mt-[-2px]">👁️</div>
                         <div>
-                           <h5 className="font-bold text-blue-600 text-sm">Published</h5>
+                           <h5 className={`font-bold ${status === 'Published' ? 'text-blue-600' : 'text-slate-700'} text-sm`}>Published</h5>
                            <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Visible to all enrolled students</p>
                         </div>
+                     </div>
+                     <div 
+                        className={`border ${status === 'Draft' ? 'border-blue-400 bg-blue-50/20' : 'border-slate-200 bg-white hover:bg-slate-50'} rounded-xl p-4 flex items-start gap-3 cursor-pointer`}
+                        onClick={() => setStatus('Draft')}
+                     >
+                        <div className="text-lg shrink-0 mt-[-2px]">📝</div>
+                        <div>
+                           <h5 className={`font-bold ${status === 'Draft' ? 'text-blue-600' : 'text-slate-700'} text-sm`}>Draft</h5>
+                           <p className="text-[11px] text-slate-400 mt-0.5 font-medium">Only visible to you (not published)</p>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+
+            <div className="p-6 pb-6 border-b border-slate-100">
+               <h4 className="text-sm font-bold text-slate-700 mb-4">Completion Requirements</h4>
+               <div className="space-y-3">
+                  <div className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50/50">
+                     <span className="text-sm text-slate-700 font-medium">Minimum lesson watch %</span>
+                     <div className="bg-white border border-slate-200 rounded-md px-3 py-1 flex items-center gap-2">
+                        <input type="number" value={minLessonWatchPercent} onChange={e => setMinLessonWatchPercent(Number(e.target.value))} className="w-12 outline-none font-bold text-sm text-slate-800 bg-transparent text-right" />
+                        <span className="text-slate-400 text-xs">%</span>
+                     </div>
+                  </div>
+                  <div className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50/50">
+                     <span className="text-sm text-slate-700 font-medium">Minimum quiz pass score</span>
+                     <div className="bg-white border border-slate-200 rounded-md px-3 py-1 flex items-center gap-2">
+                        <input type="number" value={minQuizPassScore} onChange={e => setMinQuizPassScore(Number(e.target.value))} className="w-12 outline-none font-bold text-sm text-slate-800 bg-transparent text-right" />
+                        <span className="text-slate-400 text-xs">%</span>
                      </div>
                   </div>
                </div>
@@ -388,30 +446,32 @@ export default function NewCourseWizard() {
         <div className="flex-1 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
            <div className="p-5 border-b border-slate-100">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">⭐ Points System</h3>
-           </div>
-           
-           <div className="p-5 space-y-4">
-              {[
-                 { icon: '📖', title: 'Complete Lesson', subtitle: 'Finish a video lesson', val: '10' },
-                 { icon: '📝', title: 'Pass Quiz', subtitle: 'Score at or above pass threshold', val: '50' },
-                 { icon: '📎', title: 'Submit Assignment', subtitle: 'On-time submission', val: '80' },
-                 { icon: '💬', title: 'Forum Contribution', subtitle: 'Post or reply in forum', val: '5' },
-                 { icon: '🎯', title: 'Perfect Quiz Score', subtitle: 'Score 100% on any quiz', val: '25' },
-                 { icon: '🎓', title: 'Course Completion', subtitle: 'Finish all required activities', val: '200' },
-              ].map((item, idx) => (
-                 <div key={idx} className="flex items-center justify-between border border-slate-200 rounded-xl p-4 hover:border-slate-300 transition-colors bg-white">
-                    <div className="flex gap-4 items-center">
-                       <span className="text-xl">{item.icon}</span>
-                       <div>
-                          <h4 className="text-sm font-bold text-slate-800">{item.title}</h4>
-                          <p className="text-[11px] font-medium text-slate-400 mt-0.5">{item.subtitle}</p>
-                       </div>
-                    </div>
-                    <div>
-                       <input type="text" defaultValue={item.val} className="w-16 text-center font-bold text-blue-600 px-3 py-2 bg-white border border-blue-400 rounded-lg" />
-                    </div>
-                 </div>
-              ))}
+              <div className="p-5 space-y-4">
+               {[
+                  { key: 'lesson', icon: '📖', title: 'Complete Lesson', subtitle: 'Finish a video lesson' },
+                  { key: 'quiz', icon: '📝', title: 'Pass Quiz', subtitle: 'Score at or above pass threshold' },
+                  { key: 'assignment', icon: '📎', title: 'Submit Assignment', subtitle: 'On-time submission' },
+               ].map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between border border-slate-200 rounded-xl p-4 hover:border-slate-300 transition-colors bg-white">
+                     <div className="flex gap-4 items-center">
+                        <span className="text-xl">{item.icon}</span>
+                        <div>
+                           <h4 className="text-sm font-bold text-slate-800">{item.title}</h4>
+                           <p className="text-[11px] font-medium text-slate-400 mt-0.5">{item.subtitle}</p>
+                        </div>
+                     </div>
+                     <div>
+                        <input 
+                           type="number" 
+                           value={(pointDefaults as any)[item.key]} 
+                           onChange={e => setPointDefaults({...pointDefaults, [item.key]: Number(e.target.value)})} 
+                           className="w-20 text-center font-bold text-blue-600 px-3 py-2 bg-white border border-blue-400 rounded-lg outline-none" 
+                        />
+                     </div>
+                  </div>
+               ))}
+               <p className="text-xs text-slate-400 font-medium pt-4">These default points will be applied when you add new lessons in the Content tab.</p>
+            </div>
            </div>
         </div>
      </div>

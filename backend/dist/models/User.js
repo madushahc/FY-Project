@@ -19,8 +19,14 @@ const userSchema = new Schema({
     passwordHash: { type: String, required: true },
     university: { type: String, required: true, trim: true },
     department: { type: String, required: true, trim: true },
+    phoneNumber: { type: String, default: "" },
+    jobTitle: { type: String, default: "" },
+    location: { type: String, default: "" },
+    website: { type: String, default: "" },
     points: { type: Number, default: 0 },
     badges: [{ type: String }],
+    bio: { type: String, default: "" },
+    profilePhoto: { type: String, default: "" },
 }, {
     timestamps: true,
 });
