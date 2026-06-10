@@ -1,6 +1,13 @@
-import express from 'express';
-import { getPostsByCourse, createPost, replyToPost } from '../controllers/forumController.js';
-import { protect } from '../middleware/auth.js';
+import express from "express";
+import {
+  getPostsByCourse,
+  getAllPosts,
+  createPost,
+  replyToPost,
+  likePost,
+  likeReply,
+} from "../controllers/forumController.js";
+import { protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -29,7 +36,8 @@ const router = express.Router();
  *       200:
  *         description: List of forum posts
  */
-router.get('/course/:courseId', protect, getPostsByCourse);
+router.get("/course/:courseId", protect, getPostsByCourse);
+router.get("/all", protect, getAllPosts);
 /**
  * @swagger
  * /api/forums:
@@ -59,7 +67,7 @@ router.get('/course/:courseId', protect, getPostsByCourse);
  *       201:
  *         description: Post created
  */
-router.post('/', protect, createPost);
+router.post("/", protect, createPost);
 
 /**
  * @swagger
@@ -90,6 +98,8 @@ router.post('/', protect, createPost);
  *       201:
  *         description: Reply added
  */
-router.post('/:postId/reply', protect, replyToPost);
+router.post("/:postId/reply", protect, replyToPost);
+router.post("/:postId/like", protect, likePost);
+router.post("/:postId/reply/:replyId/like", protect, likeReply);
 
 export default router;

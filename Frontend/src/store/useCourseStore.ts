@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import api from "../lib/api";
+import { useUserStore } from "./useUserStore";
 
 interface Course {
   _id: string;
@@ -118,6 +119,11 @@ export const useCourseStore = create<CourseState>((set, get) => ({
     try {
       await api.post("/enrollments", { courseId });
       await get().fetchMyEnrollments(); // Re-fetch list
+      // Refresh notifications after enrolling
+      try {
+        const fetchNotifications = useUserStore.getState().fetchNotifications;
+        if (fetchNotifications) await fetchNotifications();
+      } catch (e) {}
     } catch (error: any) {
       set({
         error: error.response?.data?.message || error.message,

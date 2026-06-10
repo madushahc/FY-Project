@@ -16,7 +16,7 @@ export default function LecturerStudents() {
            // group by user to prevent duplicates if a user is in multiple courses
            const userMap = new Map();
            res.data.forEach((enrollment: any) => {
-              const u = enrollment.user;
+              const u = enrollment.student;
               if (!u) return;
               if (!userMap.has(u._id)) {
                  userMap.set(u._id, {
@@ -141,7 +141,7 @@ export default function LecturerStudents() {
                         {student.courses} courses
                      </td>
                      <td className="py-4 px-4 text-sm text-blue-600 font-medium">
-                        {student.score}
+                        {student.pts}
                      </td>
                      <td className="py-4 px-4">
                         <div className="flex items-center gap-2">

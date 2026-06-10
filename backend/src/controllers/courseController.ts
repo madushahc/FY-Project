@@ -1,7 +1,9 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import Course from "../models/Course.js";
 import { AuthRequest } from "../middleware/auth.js";
 import Enrollment from "../models/Enrollment.js";
+import { sendNotificationsToUsers } from "../utils/notificationService.js";
 
 // @desc    Get all courses (Published for students, All for admin/lecturers)
 // @route   GET /api/courses
@@ -29,35 +31,6 @@ export const getCourses = async (
   }
 };
 
-// @desc    Get courses created by the logged-in lecturer/admin
-// @route   GET /api/courses/my-courses
-export const getMyCourses = async (
-  req: AuthRequest,
-  res: Response,
-): Promise<void> => {
-  try {
-    if (!req.user?._id) {
-      res.status(401).json({ message: "Not authorized" });
-      return;
-    }
-
-    const courses = await Course.find({ instructor: req.user._id as any })
-      .populate("instructor", "name email")
-      .lean();
-
-    const coursesWithCounts = await Promise.all(
-      courses.map(async (c: any) => {
-        const count = await Enrollment.countDocuments({ course: c._id });
-        return { ...c, enrollmentCount: count };
-      }),
-    );
-
-    res.json(coursesWithCounts);
-  } catch (error) {
-    res.status(500).json({ message: "Server Error" });
-  }
-};
-
 // @desc    Get single course
 // @route   GET /api/courses/:id
 export const getCourseById = async (
@@ -65,6 +38,11 @@ export const getCourseById = async (
   res: Response,
 ): Promise<void> => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      res.status(404).json({ message: "Course not found" });
+      return;
+    }
+
     const course = await Course.findById(req.params.id)
       .populate("instructor", "name email")
       .populate("modules.lessons.refId");
@@ -121,6 +99,11 @@ export const updateCourse = async (
   res: Response,
 ): Promise<void> => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      res.status(404).json({ message: "Course not found" });
+      return;
+    }
+
     let course = await Course.findById(req.params.id);
 
     if (!course) {
@@ -164,9 +147,57 @@ export const updateCourse = async (
       updateData.thumbnailUrl = `/uploads/${req.file.filename}`;
     }
 
+    // Detect module additions/removals if modules provided
+    let addedModules: string[] = [];
+    let removedModules: string[] = [];
+    if (updateData.modules && Array.isArray(updateData.modules)) {
+      const oldTitles = (course.modules || []).map((m: any) => String(m.title));
+      const newTitles = updateData.modules.map((m: any) => String(m.title));
+      addedModules = newTitles.filter((t: string) => !oldTitles.includes(t));
+      removedModules = oldTitles.filter((t: string) => !newTitles.includes(t));
+    }
+
     course = await Course.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
     });
+
+    if (!course) {
+      res.status(500).json({ message: "Failed to update course" });
+      return;
+    }
+
+    // If modules changed, notify enrolled students
+    try {
+      if (addedModules.length > 0 || removedModules.length > 0) {
+        const enrollments = await Enrollment.find({ course: course._id });
+        const studentIds = enrollments.map((e) => e.student);
+        const messages: Array<Promise<void>> = [];
+        if (addedModules.length > 0) {
+          messages.push(
+            sendNotificationsToUsers(studentIds, {
+              title: `New module(s) added to ${course.title}`,
+              message: `New module(s) added: ${addedModules.join(", ")}. Check the course for details.`,
+              type: "system",
+              linkUrl: `/student/courses/${course._id}`,
+            }),
+          );
+        }
+        if (removedModules.length > 0) {
+          messages.push(
+            sendNotificationsToUsers(studentIds, {
+              title: `Module(s) removed from ${course.title}`,
+              message: `The following module(s) were removed: ${removedModules.join(", ")}.`,
+              type: "system",
+              linkUrl: `/student/courses/${course._id}`,
+            }),
+          );
+        }
+        await Promise.all(messages);
+      }
+    } catch (e) {
+      console.error("Failed to notify students about module changes", e);
+    }
+
     res.json(course);
   } catch (error) {
     res.status(500).json({ message: "Server Error" });
@@ -181,6 +212,11 @@ export const deleteCourse = async (
   res: Response,
 ): Promise<void> => {
   try {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      res.status(404).json({ message: "Course not found" });
+      return;
+    }
+
     const course = await Course.findById(req.params.id);
 
     if (!course) {
@@ -223,7 +259,7 @@ export const getLecturerStudents = async (
     const courseIds = myCourses.map((c) => c._id);
 
     const enrollments = await Enrollment.find({ course: { $in: courseIds } })
-      .populate("user", "name email profilePic")
+      .populate("student", "name email profilePhoto points")
       .populate("course", "title");
 
     res.json(enrollments);
