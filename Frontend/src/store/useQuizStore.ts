@@ -2,9 +2,12 @@ import { create } from 'zustand';
 import api from '../lib/api';
 
 interface Question {
-  questionText: string;
+  _id?: string;
+  text?: string;
+  questionText?: string;
   options: string[];
-  correctOption: number;
+  correctAnswer?: string;
+  correctOption?: number;
 }
 
 interface Quiz {
@@ -14,6 +17,7 @@ interface Quiz {
   questions: Question[];
   totalPoints: number;
   timeLimit: number;
+  passingScore?: number;
 }
 
 interface QuizState {

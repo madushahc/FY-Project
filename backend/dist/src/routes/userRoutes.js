@@ -1,5 +1,5 @@
 import express from 'express';
-import { getUsers, updateProfile } from '../controllers/userController.js';
+import { getUsers, updateProfile, changePassword, createUser, updateUser, deleteUser } from '../controllers/userController.js';
 import { protect, authorize } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 const router = express.Router();
@@ -26,6 +26,10 @@ const router = express.Router();
  *         description: Forbidden
  */
 router.get('/', protect, authorize('Admin'), getUsers);
+router.post('/', protect, authorize('Admin'), createUser);
 router.put('/profile', protect, upload.single('profilePhoto'), updateProfile);
+router.put('/change-password', protect, changePassword);
+router.put('/:id', protect, authorize('Admin'), updateUser);
+router.delete('/:id', protect, authorize('Admin'), deleteUser);
 export default router;
 //# sourceMappingURL=userRoutes.js.map

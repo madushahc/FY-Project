@@ -12,6 +12,7 @@ export default function NewCourseWizard() {
   const [currentStep, setCurrentStep] = useState(1);
   const [title, setTitle] = useState('');
   const [code, setCode] = useState('');
+  const [department, setDepartment] = useState('Computing');
   const [description, setDescription] = useState('');
   const [descLength, setDescLength] = useState(0);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -102,6 +103,7 @@ export default function NewCourseWizard() {
       formData.append('code', code || 'C' + Math.floor(Math.random() * 10000));
       formData.append('description', description || 'No description provided.');
       formData.append('status', status);
+      formData.append('department', department);
       formData.append('enrollmentType', enrollmentType);
       formData.append('completionRules', JSON.stringify({
         minLessonWatchPercent,
@@ -189,7 +191,13 @@ export default function NewCourseWizard() {
             </div>
             <div>
                <label className="block text-sm font-bold text-slate-700 mb-2">Department</label>
-               <input type="text" placeholder="Faculty of Computing" className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-slate-800" />
+               <input 
+                  type="text" 
+                  value={department}
+                  onChange={e => setDepartment(e.target.value)}
+                  placeholder="Faculty of Computing" 
+                  className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-slate-800" 
+                />
             </div>
          </div>
          <div>

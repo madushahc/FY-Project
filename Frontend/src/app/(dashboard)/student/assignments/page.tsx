@@ -34,13 +34,14 @@ export default function StudentAssignments() {
       try {
         let agg: any[] = [];
         for (const enrollment of myEnrollments) {
-           const courseId = enrollment.course._id || enrollment.course;
+           const courseId = enrollment.course?._id || enrollment.course;
+           if (!courseId) continue;
            const res = await api.get(`/assignments/course/${courseId}`);
            
            // Inject course name into assignments for UI layout
            const mapped = res.data.map((a: any) => ({
              ...a,
-             courseName: enrollment.course.title || 'Unknown Course'
+             courseName: enrollment.course?.title || 'Unknown Course'
            }));
            agg = [...agg, ...mapped];
         }

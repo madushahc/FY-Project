@@ -151,7 +151,7 @@ export default function QuizzesPage() {
              <div className="p-8 md:p-10 min-h-[400px]">
                 <p className="text-blue-600 font-bold text-xs tracking-wider mb-3 uppercase">Question {currentQuestionIndex + 1}</p>
                 <h2 className="text-2xl font-medium text-slate-800 mb-8 max-w-2xl leading-snug">
-                   {q?.questionText || 'Loading question...'}
+                   {q?.text || q?.questionText || 'Loading question...'}
                 </h2>
 
                 <div className="space-y-4">

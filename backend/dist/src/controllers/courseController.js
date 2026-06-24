@@ -47,7 +47,10 @@ export const getCourseById = async (req, res) => {
 // @access  Lecturer, Admin
 export const createCourse = async (req, res) => {
     try {
-        const courseData = { ...req.body, instructor: req.user?._id };
+        const instructor = req.user?.role === "Admin" && req.body.instructor
+            ? req.body.instructor
+            : req.user?._id;
+        const courseData = { ...req.body, instructor };
         // Parse JSON strings if data came from FormData
         if (typeof courseData.modules === "string") {
             try {

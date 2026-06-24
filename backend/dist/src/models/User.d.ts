@@ -16,6 +16,8 @@ export interface IUser extends Document {
     badges: string[];
     bio?: string;
     profilePhoto?: string;
+    resetPasswordToken?: string | undefined;
+    resetPasswordExpires?: Date | undefined;
 }
 declare const _default: mongoose.Model<IUser, {}, {}, {}, mongoose.Document<unknown, {}, IUser, {}, mongoose.DefaultSchemaOptions> & IUser & Required<{
     _id: mongoose.Types.ObjectId;

@@ -10,6 +10,7 @@ export default function BrowseCourses() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [enrollingId, setEnrollingId] = useState<string | null>(null);
+  const [selectedDept, setSelectedDept] = useState('All Departments');
   const router = useRouter();
 
   useEffect(() => {
@@ -37,13 +38,33 @@ export default function BrowseCourses() {
   };
 
   const filteredCourses = availableCourses.filter(c => {
-    if (activeFilter !== 'All' && activeFilter !== 'All (18)') {
-      // Basic filtering based on status or type if needed. For now, match all.
-    }
+    // 1. Search Query filter
     if (searchQuery) {
-      return c.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-             (c.instructor?.name && c.instructor.name.toLowerCase().includes(searchQuery.toLowerCase()));
+      const q = searchQuery.toLowerCase();
+      const titleMatch = c.title.toLowerCase().includes(q);
+      const codeMatch = c.code?.toLowerCase().includes(q);
+      const instructorMatch = c.instructor?.name && c.instructor.name.toLowerCase().includes(q);
+      if (!titleMatch && !codeMatch && !instructorMatch) return false;
     }
+
+    // 2. Sidebar Department filter
+    if (selectedDept !== 'All Departments') {
+      if (!c.department || !c.department.toLowerCase().includes(selectedDept.toLowerCase())) {
+        return false;
+      }
+    }
+
+    // 3. Top Filter Bar filter
+    if (activeFilter !== 'All' && activeFilter !== 'All (18)' && activeFilter !== 'All Departments') {
+      if (activeFilter === 'Computing' || activeFilter === 'Business' || activeFilter === 'Engineering') {
+        if (!c.department || !c.department.toLowerCase().includes(activeFilter.toLowerCase())) return false;
+      } else if (activeFilter === 'Core Modules') {
+        if (!c.category?.toLowerCase().includes('core') && !(c as any).type?.toLowerCase().includes('core')) return false;
+      } else if (activeFilter === 'Electives') {
+        if (!c.category?.toLowerCase().includes('elective') && !(c as any).type?.toLowerCase().includes('elective')) return false;
+      }
+    }
+
     return true;
   });
 
@@ -59,7 +80,14 @@ export default function BrowseCourses() {
         {['All (18)', 'Computing', 'Business', 'Core Modules', 'Electives', 'New', 'Available'].map((f) => (
           <button
             key={f}
-            onClick={() => setActiveFilter(f)}
+            onClick={() => {
+              setActiveFilter(f);
+              if (f === 'All (18)') {
+                setSelectedDept('All Departments');
+              } else if (f === 'Computing' || f === 'Business' || f === 'Engineering') {
+                setSelectedDept(f);
+              }
+            }}
             className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${
               (activeFilter === f || (activeFilter === 'All' && f === 'All (18)'))
                 ? 'bg-blue-600 text-white' 
@@ -100,8 +128,21 @@ export default function BrowseCourses() {
                  <div className="space-y-2.5">
                     {['All Departments', 'Computing', 'Business', 'Engineering'].map((opt, i) => (
                        <label key={i} className="flex items-center gap-3 cursor-pointer group">
-                          <input type="radio" name="dept" className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500" defaultChecked={i === 0} />
-                          <span className={`text-sm font-medium ${i === 0 ? 'text-blue-700' : 'text-slate-500 group-hover:text-slate-700'}`}>{opt}</span>
+                          <input 
+                            type="radio" 
+                            name="dept" 
+                            className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500" 
+                            checked={selectedDept === opt} 
+                            onChange={() => {
+                              setSelectedDept(opt);
+                              if (opt === 'All Departments') {
+                                setActiveFilter('All (18)');
+                              } else if (['Computing', 'Business', 'Engineering'].includes(opt)) {
+                                setActiveFilter(opt);
+                              }
+                            }}
+                          />
+                          <span className={`text-sm font-medium ${selectedDept === opt ? 'text-blue-700' : 'text-slate-500 group-hover:text-slate-700'}`}>{opt}</span>
                        </label>
                     ))}
                  </div>
@@ -136,11 +177,18 @@ export default function BrowseCourses() {
                  </select>
               </div>
 
-              <div className="pt-2">
-                 <button className="w-full py-3 bg-slate-50 text-slate-700 font-bold rounded-xl text-sm border border-slate-200 hover:bg-slate-100 transition">
-                    Clear Filters
-                 </button>
-              </div>
+               <div className="pt-2">
+                  <button 
+                    onClick={() => {
+                      setSelectedDept('All Departments');
+                      setActiveFilter('All (18)');
+                      setSearchQuery('');
+                    }}
+                    className="w-full py-3 bg-slate-50 text-slate-700 font-bold rounded-xl text-sm border border-slate-200 hover:bg-slate-100 transition"
+                  >
+                     Clear Filters
+                  </button>
+               </div>
            </div>
         </div>
 

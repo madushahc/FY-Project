@@ -62,7 +62,7 @@ export default function MyProgress() {
 
   const totalCourses = myEnrollments.length;
   const avgCompletion = totalCourses > 0 ? Math.round(myEnrollments.reduce((acc, e) => acc + (e.progress || 0), 0) / totalCourses) : 0;
-  const totalCompletedLessons = myEnrollments.reduce((acc, e) => acc + (e.completedLessons?.length || 0), 0);
+  const totalCompletedLessons = myEnrollments.reduce((acc, e) => acc + ((e as any).completedLessons?.length || 0), 0);
   
   const currentLevel = Math.floor((user?.points || 0) / 200) + 1;
   const nextLevel = currentLevel + 1;

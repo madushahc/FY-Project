@@ -35,9 +35,7 @@ export default function Login() {
       const selectedRole = String(role).toLowerCase();
 
       if (actualRole !== selectedRole) {
-        setError(
-          `This account is registered as ${response.data.role}, not ${role}.`,
-        );
+        setError(`Check the correct credentials.`);
         return;
       }
 
@@ -50,7 +48,7 @@ export default function Login() {
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
-          "Failed to sign in. Please check your credentials.",
+        "Failed to sign in. Please check your credentials.",
       );
     } finally {
       setLoading(false);
@@ -109,12 +107,12 @@ export default function Login() {
                 >
                   Password
                 </label>
-                <a
-                  href="#"
+                <Link
+                  href="/forgot-password"
                   className="text-xs font-medium text-blue-600 hover:text-blue-700"
                 >
                   Forgot password?
-                </a>
+                </Link>
               </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

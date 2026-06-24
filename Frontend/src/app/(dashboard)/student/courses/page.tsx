@@ -14,13 +14,13 @@ export default function MyCourses() {
     fetchMyEnrollments();
   }, [fetchMyEnrollments]);
 
-  const colors: ('blue' | 'emerald' | 'purple' | 'orange' | 'teal' | 'pink')[] = ['blue', 'emerald', 'purple', 'orange', 'teal', 'pink'];
+  const colors: ('blue' | 'emerald' | 'purple' | 'orange' | 'yellow')[] = ['blue', 'emerald', 'purple', 'orange', 'yellow'];
 
   const mappedCourses: CourseData[] = myEnrollments.map((e, index) => ({
     id: e.course._id || (e.course as any),
     title: e.course.title || 'Unknown Course',
-    code: 'CS' + (300 + index),
-    department: 'Computing',
+    code: e.course.code || ('CS' + (300 + index)),
+    department: e.course.department || 'Computing',
     lecturer: e.course.instructor?.name || 'Instructor',
     lessons: e.course.modules?.reduce((acc: number, m: any) => acc + (m.lessons?.length || 0), 0) || 0,
     quizzes: 0,

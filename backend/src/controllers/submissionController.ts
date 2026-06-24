@@ -2,7 +2,9 @@ import { Request, Response } from "express";
 import Submission from "../models/Submission.js";
 import Assignment from "../models/Assignment.js";
 import Notification from "../models/Notification.js";
+import User from "../models/User.js";
 import { sendNotificationToUser } from "../utils/notificationService.js";
+import { checkAndAwardBadges } from "../utils/gamificationService.js";
 import { AuthRequest } from "../middleware/auth.js";
 
 // @desc    Submit an assignment
@@ -132,6 +134,28 @@ export const gradeSubmission = async (
       type: "grade",
       urgency: "normal",
     });
+
+    // Award points and badges to the student user
+    if (score > 0) {
+      try {
+        const studentUser = await User.findById(submission.student);
+        if (studentUser) {
+          const pointsEarned = Math.round(score);
+          studentUser.points += pointsEarned;
+          await studentUser.save();
+          
+          await sendNotificationToUser(studentUser._id, {
+            title: `Points Earned! ⭐`,
+            message: `You earned ${pointsEarned} points for assignment "${assignmentTitle}".`,
+            type: "points",
+          });
+          
+          await checkAndAwardBadges(studentUser);
+        }
+      } catch (err) {
+        console.error("Failed to award points for submission grading", err);
+      }
+    }
 
     res.json(submission);
   } catch (error) {

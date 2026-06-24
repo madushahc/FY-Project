@@ -27,6 +27,8 @@ const userSchema = new Schema({
     badges: [{ type: String }],
     bio: { type: String, default: "" },
     profilePhoto: { type: String, default: "" },
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
 }, {
     timestamps: true,
 });

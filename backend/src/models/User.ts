@@ -17,7 +17,8 @@ export interface IUser extends Document {
   badges: string[];
   bio?: string;
   profilePhoto?: string;
-
+  resetPasswordToken?: string | undefined;
+  resetPasswordExpires?: Date | undefined;
 }
 
 const userSchema = new Schema<IUser>(
@@ -49,7 +50,8 @@ const userSchema = new Schema<IUser>(
     badges: [{ type: String }],
     bio: { type: String, default: "" },
     profilePhoto: { type: String, default: "" },
-
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
   },
   {
     timestamps: true,

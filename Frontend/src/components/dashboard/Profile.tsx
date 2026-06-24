@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { User, Bell } from "lucide-react";
+import { User, Bell, Shield } from "lucide-react";
 import { useUserStore } from "@/store/useUserStore";
 import api from "@/lib/api";
 
@@ -25,6 +25,48 @@ export default function Profile() {
   const [saveMessage, setSaveMessage] = useState("");
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string>("");
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [securityError, setSecurityError] = useState("");
+  const [securitySuccess, setSecuritySuccess] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSecurityError("");
+    setSecuritySuccess("");
+
+    if (newPassword.length < 6) {
+      setSecurityError("New password must be at least 6 characters long.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setSecurityError("New passwords do not match.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await api.put("/users/change-password", {
+        currentPassword,
+        newPassword,
+      });
+
+      setSecuritySuccess("Password updated successfully!");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      setSecurityError(
+        err.response?.data?.message || "Failed to change password. Please check your credentials."
+      );
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   useEffect(() => {
     initializeUser();
@@ -123,7 +165,7 @@ export default function Profile() {
           <div className="mb-2">
             <h2 className="text-2xl font-bold">{user?.name || "Loading..."}</h2>
             <p className="text-blue-100 text-sm mb-2 opacity-90">
-              {user?.role || "Role"} · {user?.university || "University"}
+              {user?.role || "Role"}{user?.role !== "Admin" && user?.university ? ` · ${user.university}` : ""}
             </p>
             {user?.role === "Student" && (
               <div className="flex gap-2 text-xs font-bold">
@@ -161,6 +203,12 @@ export default function Profile() {
                 <div className="flex items-center gap-3">
                   <Bell className="w-4 h-4" /> Notifications
                 </div>
+              </button>
+              <button
+                onClick={() => setActiveTab("Security")}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors ${activeTab === "Security" ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}
+              >
+                <Shield className="w-4 h-4" /> Security
               </button>
             </div>
           </div>
@@ -259,30 +307,34 @@ export default function Profile() {
                       className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">
-                      University
-                    </label>
-                    <input
-                      type="text"
-                      name="university"
-                      value={formData.university}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">
-                      Department
-                    </label>
-                    <input
-                      type="text"
-                      name="department"
-                      value={formData.department}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
+                  {user?.role !== "Admin" && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700">
+                        University
+                      </label>
+                      <input
+                        type="text"
+                        name="university"
+                        value={formData.university}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  )}
+                  {user?.role !== "Admin" && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700">
+                        Department
+                      </label>
+                      <input
+                        type="text"
+                        name="department"
+                        value={formData.department}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700">
                       Phone Number
@@ -309,47 +361,53 @@ export default function Profile() {
                       className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">
-                      Location
-                    </label>
-                    <input
-                      type="text"
-                      name="location"
-                      value={formData.location}
-                      onChange={handleChange}
-                      placeholder="Colombo, Sri Lanka"
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">
-                      Website
-                    </label>
-                    <input
-                      type="url"
-                      name="website"
-                      value={formData.website}
-                      onChange={handleChange}
-                      placeholder="https://example.com"
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
+                  {user?.role !== "Admin" && (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">
+                          Location
+                        </label>
+                        <input
+                          type="text"
+                          name="location"
+                          value={formData.location}
+                          onChange={handleChange}
+                          placeholder="Colombo, Sri Lanka"
+                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">
+                          Website
+                        </label>
+                        <input
+                          type="url"
+                          name="website"
+                          value={formData.website}
+                          onChange={handleChange}
+                          placeholder="https://example.com"
+                          className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                <div className="space-y-2 mb-8">
-                  <label className="text-sm font-bold text-slate-700">
-                    Bio
-                  </label>
-                  <textarea
-                    rows={4}
-                    name="bio"
-                    value={formData.bio}
-                    onChange={handleChange}
-                    placeholder="Tell us about yourself..."
-                    className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
-                  ></textarea>
-                </div>
+                {user?.role !== "Admin" && (
+                  <div className="space-y-2 mb-8">
+                    <label className="text-sm font-bold text-slate-700">
+                      Bio
+                    </label>
+                    <textarea
+                      rows={4}
+                      name="bio"
+                      value={formData.bio}
+                      onChange={handleChange}
+                      placeholder="Tell us about yourself..."
+                      className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+                    ></textarea>
+                  </div>
+                )}
 
                 <div className="flex items-center gap-3">
                   <button
@@ -461,6 +519,72 @@ export default function Profile() {
                   ))
                 )}
               </div>
+            </div>
+          )}
+
+          {activeTab === "Security" && (
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <h3 className="font-bold text-slate-800 mb-2">Change Password</h3>
+              <p className="text-xs text-slate-400 mb-6">
+                For security, you must confirm your current password to set a new password.
+              </p>
+
+              <form onSubmit={handleChangePassword} className="space-y-5 max-w-md">
+                {securityError && (
+                  <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm font-medium rounded-lg text-center">
+                    {securityError}
+                  </div>
+                )}
+                {securitySuccess && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-600 text-sm font-medium rounded-lg text-center">
+                    {securitySuccess}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 block">Current Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 block">New Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 block">Confirm New Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isChangingPassword}
+                  className="px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg text-sm hover:bg-blue-700 transition disabled:opacity-50 mt-4"
+                >
+                  {isChangingPassword ? "Updating..." : "Update Password"}
+                </button>
+              </form>
             </div>
           )}
         </div>

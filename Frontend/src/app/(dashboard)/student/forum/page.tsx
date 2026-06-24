@@ -15,7 +15,7 @@ import { useUserStore } from "@/store/useUserStore";
 import api from "@/lib/api";
 
 export default function DiscussionForum() {
-  const { createPost, replyToPost, likePost, likeReply } = useForumStore();
+  const { createPost, replyToPost, likePost, likeReply } = useForumStore() as any;
   const { myEnrollments, fetchMyEnrollments } = useCourseStore();
   const { user, initializeUser } = useUserStore();
 

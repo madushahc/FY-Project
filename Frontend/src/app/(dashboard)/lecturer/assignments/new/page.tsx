@@ -6,6 +6,19 @@ import { useRouter } from 'next/navigation';
 import { useCourseStore } from '@/store/useCourseStore';
 import api from '@/lib/api';
 
+const getCurrentDateTimeString = (offsetDays = 0) => {
+   const date = new Date();
+   if (offsetDays) {
+      date.setDate(date.getDate() + offsetDays);
+   }
+   const year = date.getFullYear();
+   const month = String(date.getMonth() + 1).padStart(2, '0');
+   const day = String(date.getDate()).padStart(2, '0');
+   const hours = String(date.getHours()).padStart(2, '0');
+   const minutes = String(date.getMinutes()).padStart(2, '0');
+   return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 export default function AddAssignment() {
   const router = useRouter();
   const { myCourses, fetchMyCreatedCourses } = useCourseStore();
@@ -14,7 +27,7 @@ export default function AddAssignment() {
   const [course, setCourse] = useState('');
   const [instructions, setInstructions] = useState('');
   const [points, setPoints] = useState('100');
-  const [deadline, setDeadline] = useState('');
+  const [deadline, setDeadline] = useState(getCurrentDateTimeString(1));
   const [penalty, setPenalty] = useState('0');
   const [loading, setLoading] = useState(false);
 
@@ -30,6 +43,13 @@ export default function AddAssignment() {
      
      setLoading(true);
      try {
+        const rubricData = [
+           { criteria: 'Correct Class Identification', points: 25 },
+           { criteria: 'Attributes & Methods', points: 20 },
+           { criteria: 'Relationships & Multiplicity', points: 25 },
+           { criteria: 'UML Notation & Formatting', points: 10 }
+        ];
+
         await api.post('/assignments', {
            title,
            course,
@@ -37,6 +57,7 @@ export default function AddAssignment() {
            points: Number(points),
            deadline: new Date(deadline),
            latePenaltyPercent: Number(penalty),
+           rubric: rubricData,
            isPublished: true
         });
         alert("Assignment published successfully!");
@@ -54,35 +75,38 @@ export default function AddAssignment() {
          <h2 className="text-2xl font-semibold text-slate-800">Add Assignment</h2>
       </div>
 
-      <div className="flex justify-between items-center mb-6">
-        <input 
-           type="text" 
-           placeholder="Assignment Title (e.g. UML Class Diagram)" 
-           value={title}
-           onChange={(e) => setTitle(e.target.value)}
-           className="text-xl font-medium text-slate-800 bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-blue-500 focus:outline-none w-[400px] pb-1 transition-colors placeholder:text-slate-400"
-        />
-        <button onClick={handlePublish} disabled={loading} className="px-5 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-sm text-sm disabled:opacity-50">
-           {loading ? 'Saving...' : 'Save Assignment'}
-        </button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm mb-6">
+         <div>
+            <label htmlFor="assignment-title" className="block text-sm font-bold text-slate-800 mb-2">Assignment Title *</label>
+            <input 
+               id="assignment-title"
+               name="title"
+               type="text" 
+               placeholder="Enter assignment title (e.g. UML Class Diagram)..." 
+               value={title}
+               onChange={(e) => setTitle(e.target.value)}
+               className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-slate-700 text-sm font-medium shadow-sm bg-white relative z-10"
+            />
+         </div>
+         
+         <div>
+            <label htmlFor="assignment-course" className="block text-sm font-bold text-slate-800 mb-2">Select Course *</label>
+            <select 
+               id="assignment-course"
+               value={course}
+               onChange={(e) => setCourse(e.target.value)}
+               className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-slate-700 text-sm font-medium shadow-sm bg-white"
+            >
+               <option value="">Select a course...</option>
+               {myCourses.map((c: any) => (
+                  <option key={c._id} value={c._id}>{c.title}</option>
+               ))}
+            </select>
+         </div>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm">
          <div className="space-y-8">
-            
-            <div>
-               <label className="block text-sm font-bold text-slate-800 mb-2">Select Course *</label>
-               <select 
-                  value={course}
-                  onChange={(e) => setCourse(e.target.value)}
-                  className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-slate-700 text-sm font-medium shadow-sm"
-               >
-                  <option value="">Select a course...</option>
-                  {myCourses.map((c: any) => (
-                     <option key={c._id} value={c._id}>{c.title}</option>
-                  ))}
-               </select>
-            </div>
 
             {/* Instructions */}
             <div>

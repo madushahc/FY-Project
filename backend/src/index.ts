@@ -20,7 +20,7 @@ app.use(cors());
 
 // Basic Route
 app.get('/', (req: Request, res: Response) => {
-    res.send('EduQuest API is running');
+  res.send('EduQuest API is running');
 });
 
 import path from 'path';
@@ -70,5 +70,5 @@ app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

@@ -5,12 +5,16 @@ import { useUserStore } from "./useUserStore";
 interface Course {
   _id: string;
   title: string;
+  code?: string;
+  department?: string;
   description: string;
+  category?: string;
   thumbnailUrl?: string;
   status: string;
   instructor?: { name: string; email: string };
   modules?: any[];
   enrollmentCount?: number;
+  enrollmentType?: string;
 }
 
 interface Enrollment {

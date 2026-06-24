@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser, loginUser } from '../controllers/authController.js';
+import { registerUser, loginUser, forgotPassword, resetPassword } from '../controllers/authController.js';
 const router = express.Router();
 /**
  * @swagger
@@ -77,5 +77,60 @@ router.post('/register', registerUser);
  *         description: Invalid credentials
  */
 router.post('/login', loginUser);
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Request a password reset email
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Success message
+ *       400:
+ *         description: Email is required
+ *       500:
+ *         description: Server error
+ */
+router.post('/forgot-password', forgotPassword);
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset password using token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - password
+ *             properties:
+ *               token:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *       400:
+ *         description: Token/password required or invalid token
+ *       500:
+ *         description: Server error
+ */
+router.post('/reset-password', resetPassword);
 export default router;
 //# sourceMappingURL=authRoutes.js.map

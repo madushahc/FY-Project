@@ -65,12 +65,12 @@ export default function TopNav({
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-full h-[36px]">
             <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
             <span className="text-sm font-bold text-blue-600">
-              {points.toLocaleString()} XP
+              {(user?.points ?? points).toLocaleString()} XP
             </span>
             <div className="w-8 h-1.5 bg-blue-200 rounded-full ml-1 overflow-hidden">
               <div
                 className="h-full bg-blue-600"
-                style={{ width: "80%" }}
+                style={{ width: `${((user?.points ?? points) % 200) / 2}%` }}
               ></div>
             </div>
           </div>

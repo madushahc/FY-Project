@@ -29,6 +29,7 @@ export default function EditCourseWizard() {
   const [currentStep, setCurrentStep] = useState(1);
   const [title, setTitle] = useState("");
   const [code, setCode] = useState("");
+  const [department, setDepartment] = useState("");
   const [description, setDescription] = useState("");
   const [descLength, setDescLength] = useState(0);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -90,7 +91,8 @@ export default function EditCourseWizard() {
   useEffect(() => {
     if (activeCourse) {
       setTitle(activeCourse.title || "");
-      setCode(activeCourse.code || "");
+      setCode((activeCourse as any).code || "");
+      setDepartment((activeCourse as any).department || "");
       setDescription(activeCourse.description || "");
       setDescLength(activeCourse.description?.length || 0);
       setModules(
@@ -99,7 +101,7 @@ export default function EditCourseWizard() {
           : [{ title: "Module 1", lessons: [] }],
       );
       setEnrollmentType((activeCourse as any).enrollmentType || "Open");
-      setStatus(activeCourse.status || "Draft");
+      setStatus(activeCourse.status === "Published" ? "Published" : "Draft");
       if ((activeCourse as any).completionRules) {
         setMinLessonWatchPercent(
           (activeCourse as any).completionRules.minLessonWatchPercent || 80,
@@ -199,6 +201,7 @@ export default function EditCourseWizard() {
       formData.append("title", title || "Untitled Course");
       formData.append("code", code || "C" + Math.floor(Math.random() * 10000));
       formData.append("description", description || "No description provided.");
+      formData.append("department", department);
       formData.append("status", isPublish ? "Published" : status);
       formData.append("enrollmentType", enrollmentType);
       formData.append(
@@ -335,6 +338,8 @@ export default function EditCourseWizard() {
           </label>
           <input
             type="text"
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
             placeholder="Faculty of Computing"
             className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-slate-800"
           />
