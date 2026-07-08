@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Course from "../models/Course.js";
+import User from "../models/User.js";
 import Enrollment from "../models/Enrollment.js";
 import { sendNotificationsToUsers } from "../utils/notificationService.js";
 // @desc    Get all courses (Published for students, All for admin/lecturers)
@@ -69,6 +70,21 @@ export const createCourse = async (req, res) => {
             courseData.thumbnailUrl = `/uploads/${req.file.filename}`;
         }
         const course = await Course.create(courseData);
+        if (course && course.status === "Published") {
+            try {
+                const students = await User.find({ role: "Student" });
+                const studentIds = students.map((s) => s._id);
+                await sendNotificationsToUsers(studentIds, {
+                    title: `New Course Available`,
+                    message: `The course "${course.title}" has been published. Enroll now to start learning!`,
+                    type: "enroll",
+                    linkUrl: `/student/browse-courses`
+                });
+            }
+            catch (err) {
+                console.error("Failed to notify course publication", err);
+            }
+        }
         res.status(201).json(course);
     }
     catch (error) {
@@ -130,9 +146,25 @@ export const updateCourse = async (req, res) => {
             addedModules = newTitles.filter((t) => !oldTitles.includes(t));
             removedModules = oldTitles.filter((t) => !newTitles.includes(t));
         }
+        const wasPublished = course?.status === "Published";
         course = await Course.findByIdAndUpdate(req.params.id, updateData, {
             new: true,
         });
+        if (course && course.status === "Published" && !wasPublished) {
+            try {
+                const students = await User.find({ role: "Student" });
+                const studentIds = students.map((s) => s._id);
+                await sendNotificationsToUsers(studentIds, {
+                    title: `New Course Available`,
+                    message: `The course "${course.title}" has been published. Enroll now to start learning!`,
+                    type: "enroll",
+                    linkUrl: `/student/browse-courses`
+                });
+            }
+            catch (err) {
+                console.error("Failed to notify course publication", err);
+            }
+        }
         if (!course) {
             res.status(500).json({ message: "Failed to update course" });
             return;

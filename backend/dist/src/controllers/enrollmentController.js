@@ -1,6 +1,8 @@
 import Enrollment from "../models/Enrollment.js";
 import Course from "../models/Course.js";
+import User from "../models/User.js";
 import { sendNotificationToUser } from "../utils/notificationService.js";
+import { checkAndAwardBadges } from "../utils/gamificationService.js";
 // @desc    Enroll student in a course
 // @route   POST /api/enrollments
 // @access  Student
@@ -73,6 +75,7 @@ export const updateProgress = async (req, res) => {
             res.status(404).json({ message: "Enrollment not found" });
             return;
         }
+        const wasCompleted = enrollment.progress === 100;
         // Check authorization
         if (enrollment.student.toString() !== (req.user?._id).toString()) {
             res.status(403).json({ message: "Not authorized for this enrollment" });
@@ -101,7 +104,27 @@ export const updateProgress = async (req, res) => {
         if (req.body.progress !== undefined) {
             enrollment.progress = req.body.progress;
         }
+        const isCompletedNow = enrollment.progress === 100;
         await enrollment.save();
+        if (isCompletedNow && !wasCompleted) {
+            try {
+                const studentUser = await User.findById(enrollment.student);
+                if (studentUser) {
+                    studentUser.points += 200;
+                    await studentUser.save();
+                    await sendNotificationToUser(studentUser._id, {
+                        title: `Course Completed! 🎉`,
+                        message: `Congratulations! You have completed the course "${course?.title || 'Course'}" and earned 200 XP!`,
+                        type: "award",
+                        linkUrl: `/student/courses/${enrollment.course}`
+                    });
+                    await checkAndAwardBadges(studentUser);
+                }
+            }
+            catch (err) {
+                console.error("Failed to notify course completion", err);
+            }
+        }
         res.json(enrollment);
     }
     catch (error) {

@@ -59,7 +59,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Serve static uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Global Error Handler
 app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import { Edit2, Trash2, X, Plus } from 'lucide-react';
+import Loading from '@/components/ui/Loading';
 
 export default function AdminUserManagement() {
   const [users, setUsers] = useState<any[]>([]);
@@ -156,9 +157,7 @@ export default function AdminUserManagement() {
             {loading ? (
               <tr>
                 <td colSpan={6} className="py-12 text-center">
-                  <div className="flex justify-center">
-                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                  </div>
+                  <Loading />
                 </td>
               </tr>
             ) : users.length === 0 ? (

@@ -13,6 +13,7 @@ import { useForumStore } from "@/store/useForumStore";
 import { useCourseStore } from "@/store/useCourseStore";
 import { useUserStore } from "@/store/useUserStore";
 import api from "@/lib/api";
+import Loading from "@/components/ui/Loading";
 
 export default function DiscussionForum() {
   const { createPost, replyToPost, likePost, likeReply } = useForumStore() as any;
@@ -220,9 +221,7 @@ export default function DiscussionForum() {
         {/* Posts Feed */}
         <div className="lg:col-span-2 space-y-4">
           {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            </div>
+            <Loading />
           ) : displayPosts.length === 0 ? (
             <div className="text-center py-12 bg-white border border-slate-200 rounded-2xl text-slate-500">
               No discussion posts found.

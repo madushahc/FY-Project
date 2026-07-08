@@ -1,6 +1,8 @@
 import Quiz from "../models/Quiz.js";
 import QuizAttempt from "../models/QuizAttempt.js";
+import User from "../models/User.js";
 import { sendNotificationToUser } from "../utils/notificationService.js";
+import { checkAndAwardBadges } from "../utils/gamificationService.js";
 // @desc    Create a quiz
 // @route   POST /api/quizzes
 // @access  Lecturer, Admin
@@ -113,6 +115,25 @@ export const submitQuizAttempt = async (req, res) => {
         }
         catch (e) {
             console.error("Failed to notify instructor about quiz attempt", e);
+        }
+        // Award points and badges to the student user
+        if (earnedPoints > 0) {
+            try {
+                const studentUser = await User.findById(req.user?._id);
+                if (studentUser) {
+                    studentUser.points += earnedPoints;
+                    await studentUser.save();
+                    await sendNotificationToUser(studentUser._id, {
+                        title: `Points Earned! ⭐`,
+                        message: `You earned ${earnedPoints} points for attempting the quiz "${quiz.title}".`,
+                        type: "points",
+                    });
+                    await checkAndAwardBadges(studentUser);
+                }
+            }
+            catch (err) {
+                console.error("Failed to award points for quiz attempt", err);
+            }
         }
         res.status(201).json({ attempt, totalPoints });
     }

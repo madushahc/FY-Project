@@ -81,7 +81,9 @@ export const useUserStore = create<UserState>((set) => ({
   updateProfile: async (data: any) => {
     set({ loading: true, error: null });
     try {
-      const response = await api.put("/users/profile", data);
+      const response = await api.put("/users/profile", data, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
       set({ user: response.data, loading: false });
       if (typeof window !== "undefined") {
         const currentUser = JSON.parse(localStorage.getItem("user") || "{}");

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { CourseCard, CourseData } from '@/components/ui/CourseCard';
 import { useCourseStore } from '@/store/useCourseStore';
+import Loading from '@/components/ui/Loading';
 
 export default function MyCourses() {
   const [activeTab, setActiveTab] = useState('All Courses');
@@ -45,9 +46,8 @@ export default function MyCourses() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`pb-3 font-medium text-sm transition-colors relative ${
-                activeTab === tab ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'
-              }`}
+              className={`pb-3 font-medium text-sm transition-colors relative ${activeTab === tab ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                }`}
             >
               {tab}
               {activeTab === tab && (
@@ -56,7 +56,7 @@ export default function MyCourses() {
             </button>
           ))}
         </div>
-        <Link 
+        <Link
           href="/student/browse-courses"
           className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
         >
@@ -71,15 +71,15 @@ export default function MyCourses() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {loading ? (
-             <div className="col-span-full py-12 flex justify-center">
-                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+             <div className="col-span-full">
+                <Loading />
              </div>
           ) : displayCourses.length === 0 ? (
-             <div className="col-span-full py-12 text-center text-slate-500">No courses found.</div>
+            <div className="col-span-full py-12 text-center text-slate-500">No courses found.</div>
           ) : (
-             displayCourses.map(course => (
-               <CourseCard key={course.id} course={course} />
-             ))
+            displayCourses.map(course => (
+              <CourseCard key={course.id} course={course} />
+            ))
           )}
         </div>
       </div>

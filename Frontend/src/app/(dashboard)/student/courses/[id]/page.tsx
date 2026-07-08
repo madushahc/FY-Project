@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCourseStore } from '@/store/useCourseStore';
 import { ArrowLeft, Check, Play, FileText, PenTool, Link as LinkIcon, BookOpen, ExternalLink } from 'lucide-react';
+import Loading from '@/components/ui/Loading';
 import Link from 'next/link';
 
 export default function CoursePlayerView() {
@@ -22,11 +23,7 @@ export default function CoursePlayerView() {
   }, [params.id, fetchCourseById, fetchMyEnrollments]);
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center py-20">
-        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
+    return <Loading />;
   }
 
   if (error || !activeCourse) {

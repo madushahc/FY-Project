@@ -5,6 +5,7 @@ import { FileText, Clock, CheckCircle2, X, CloudUpload } from 'lucide-react';
 import { useCourseStore } from '@/store/useCourseStore';
 import { useAssignmentStore } from '@/store/useAssignmentStore';
 import api from '@/lib/api';
+import Loading from '@/components/ui/Loading';
 
 export default function StudentAssignments() {
   const { myEnrollments, fetchMyEnrollments } = useCourseStore();
@@ -118,7 +119,7 @@ export default function StudentAssignments() {
 
       <div className="space-y-4">
          {loadingObj ? (
-            <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
+            <Loading />
          ) : activeTab === 'Pending' ? (
            pendingAssignments.length === 0 ? (
              <div className="text-center py-12 text-slate-500">You have no pending assignments! 🎉</div>

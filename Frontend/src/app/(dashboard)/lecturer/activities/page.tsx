@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCourseStore } from '@/store/useCourseStore';
 import api from '@/lib/api';
+import Loading from '@/components/ui/Loading';
 
 export default function LecturerActivities() {
    const router = useRouter();
@@ -157,9 +158,7 @@ export default function LecturerActivities() {
          {/* Activities Table */}
          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden overflow-x-auto">
             {loading ? (
-               <div className="flex justify-center items-center py-12">
-                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-               </div>
+               <Loading />
             ) : activities.length === 0 ? (
                <div className="text-center py-12 text-slate-500 font-medium">
                   No activities found. Create an assignment or quiz to see it here!
