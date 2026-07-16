@@ -5,6 +5,7 @@ import { FileText, Clock, CheckCircle2, X, CloudUpload } from 'lucide-react';
 import { useCourseStore } from '@/store/useCourseStore';
 import { useAssignmentStore } from '@/store/useAssignmentStore';
 import api from '@/lib/api';
+import Loading from '@/components/ui/Loading';
 
 export default function StudentAssignments() {
   const { myEnrollments, fetchMyEnrollments } = useCourseStore();
@@ -34,13 +35,14 @@ export default function StudentAssignments() {
       try {
         let agg: any[] = [];
         for (const enrollment of myEnrollments) {
-           const courseId = enrollment.course._id || enrollment.course;
+           const courseId = enrollment.course?._id || enrollment.course;
+           if (!courseId) continue;
            const res = await api.get(`/assignments/course/${courseId}`);
            
            // Inject course name into assignments for UI layout
            const mapped = res.data.map((a: any) => ({
              ...a,
-             courseName: enrollment.course.title || 'Unknown Course'
+             courseName: enrollment.course?.title || 'Unknown Course'
            }));
            agg = [...agg, ...mapped];
         }
@@ -117,7 +119,7 @@ export default function StudentAssignments() {
 
       <div className="space-y-4">
          {loadingObj ? (
-            <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
+            <Loading />
          ) : activeTab === 'Pending' ? (
            pendingAssignments.length === 0 ? (
              <div className="text-center py-12 text-slate-500">You have no pending assignments! 🎉</div>
@@ -158,31 +160,63 @@ export default function StudentAssignments() {
              mySubmissions.map((s) => {
                const assignmentData = s.assignment || {};
                return (
-                  <div key={s._id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex flex-col md:flex-row md:items-center justify-between gap-4">
-                     <div className="flex items-start gap-4">
-                        <div className={`p-3 rounded-xl ${s.status === 'Graded' ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-50 text-slate-500'}`}>
-                           <CheckCircle2 className="w-6 h-6" />
+                  <div key={s._id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition flex flex-col gap-4">
+                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                           <div className={`p-3 rounded-xl ${s.status === 'Graded' ? 'bg-emerald-50 text-emerald-500' : 'bg-slate-50 text-slate-500'}`}>
+                              <CheckCircle2 className="w-6 h-6" />
+                           </div>
+                           <div>
+                              <h3 className="font-bold text-slate-800 text-lg mb-1">{assignmentData.title || 'Assignment'}</h3>
+                              <div className="flex items-center gap-4 text-xs font-semibold mt-2">
+                                 {s.status === 'Graded' ? (
+                                   <span className="px-2.5 py-1 rounded-md text-emerald-600 bg-emerald-100">Graded</span>
+                                 ) : (
+                                   <span className="px-2.5 py-1 rounded-md text-blue-600 bg-blue-100">Pending Grade</span>
+                                 )}
+                                 <span className="text-slate-600">Submitted: {new Date(s.submittedAt).toLocaleDateString()}</span>
+                              </div>
+                           </div>
                         </div>
-                        <div>
-                           <h3 className="font-bold text-slate-800 text-lg mb-1">{assignmentData.title || 'Assignment'}</h3>
-                           <div className="flex items-center gap-4 text-xs font-semibold mt-2">
-                              {s.status === 'Graded' ? (
-                                <span className="px-2.5 py-1 rounded-md text-emerald-600 bg-emerald-100">Graded</span>
-                              ) : (
-                                <span className="px-2.5 py-1 rounded-md text-blue-600 bg-blue-100">Pending Grade</span>
-                              )}
-                              <span className="text-slate-600">Submitted: {new Date(s.submittedAt).toLocaleDateString()}</span>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                           <div className="text-right">
+                              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Score</p>
+                              <p className={`text-2xl font-bold ${s.status === 'Graded' ? 'text-emerald-600' : 'text-slate-600'}`}>
+                                 {s.score !== undefined && s.score !== null ? `${s.score}/${assignmentData.totalPoints || 100}` : '-/100'}
+                              </p>
                            </div>
                         </div>
                      </div>
-                     <div className="flex flex-col items-end gap-2 shrink-0">
-                        <div className="text-right">
-                           <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Score</p>
-                           <p className={`text-2xl font-bold ${s.status === 'Graded' ? 'text-emerald-600' : 'text-slate-600'}`}>
-                              {s.score !== undefined && s.score !== null ? s.score : '-/100'}
-                           </p>
+                     {s.status === 'Graded' && (
+                        <div className="bg-slate-50/50 border border-slate-100 rounded-xl p-4 mt-1 space-y-3">
+                           {s.feedback && (
+                              <div>
+                                 <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                                    <span>💬</span> Lecturer Feedback
+                                 </h4>
+                                 <p className="text-sm text-slate-600 font-medium leading-relaxed italic">
+                                    "{s.feedback}"
+                                 </p>
+                              </div>
+                           )}
+                           
+                           {s.rubricGrades && s.rubricGrades.length > 0 && (
+                              <div className="pt-2 border-t border-slate-100/80">
+                                 <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                    <span>🎯</span> Rubric Breakdown
+                                 </h4>
+                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {s.rubricGrades.map((rg: any, idx: number) => (
+                                       <div key={idx} className="flex justify-between items-center text-xs font-bold text-slate-700 bg-white border border-slate-150 p-2.5 rounded-lg shadow-sm">
+                                          <span>{rg.criteria}</span>
+                                          <span className="text-blue-650">{rg.score} / {rg.points} pts</span>
+                                       </div>
+                                    ))}
+                                 </div>
+                              </div>
+                           )}
                         </div>
-                     </div>
+                     )}
                   </div>
                )
              })

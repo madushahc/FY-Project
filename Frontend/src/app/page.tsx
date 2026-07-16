@@ -2,49 +2,13 @@
 
 import Link from 'next/link';
 import { GraduationCap, ArrowRight, Users, BookOpen, Trophy } from 'lucide-react';
+import PublicNavbar from '@/components/layout/PublicNavbar';
+import PublicFooter from '@/components/layout/PublicFooter';
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
-      {/* 
-        ----------------------------
-        NAVIGATION BAR
-        ----------------------------
-      */}
-      <header className="bg-white px-8 py-4 flex items-center justify-between shadow-sm sticky top-0 z-50">
-        <div className="flex items-center gap-12">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-inner">
-               <GraduationCap className="text-white w-6 h-6" strokeWidth={1.5} />
-            </div>
-            <span className="text-xl font-bold text-slate-800 tracking-tight">EduQuest</span>
-          </div>
-
-          {/* Nav Links */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold">
-            <Link href="/" className="text-blue-600">Home</Link>
-            <Link href="/courses" className="text-slate-600 hover:text-blue-600 transition">Courses</Link>
-            <Link href="/about" className="text-slate-600 hover:text-blue-600 transition">About</Link>
-          </nav>
-        </div>
-
-        {/* Auth Buttons */}
-        <div className="flex items-center gap-4">
-          <Link 
-            href="/register" 
-            className="px-5 py-2.5 text-sm font-semibold text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition"
-          >
-            Sign Up
-          </Link>
-          <Link 
-            href="/login" 
-            className="px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-700 transition"
-          >
-            Sign In
-          </Link>
-        </div>
-      </header>
+      <PublicNavbar />
 
       {/* 
         ----------------------------
@@ -261,6 +225,7 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <PublicFooter />
     </div>
   );
 }

@@ -2,7 +2,8 @@
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
     // File Layout
-    "rootDir": "./src",
+    // Set rootDir to project root so files outside ./src (e.g. scripts) are included
+    "rootDir": "./",
     "outDir": "./dist",
 
     // Environment Settings
@@ -39,6 +40,7 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    "skipLibCheck": true,
-  }
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*"]
 }

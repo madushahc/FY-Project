@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useGamificationStore } from '@/store/useGamificationStore';
 import { useUserStore } from '@/store/useUserStore';
+import Loading from '@/components/ui/Loading';
 
 export default function BadgeGallery() {
   const { badges, loading, fetchBadges } = useGamificationStore();
@@ -14,7 +15,7 @@ export default function BadgeGallery() {
   }, [fetchBadges, initializeUser]);
 
   if (loading) {
-     return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>;
+     return <Loading />;
   }
 
   // Ensure user.badges is an array
@@ -24,7 +25,6 @@ export default function BadgeGallery() {
   const earnedBadges = badges.filter(b => userBadgeNames.includes(b.name));
   const lockedBadges = badges.filter(b => !userBadgeNames.includes(b.name));
 
-  // Fallback for visual mock if DB is completely empty. We don't want a blank UI.
   const fallbackIconColor = 'bg-blue-500';
 
   return (

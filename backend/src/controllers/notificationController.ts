@@ -28,7 +28,7 @@ export const markAsRead = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    if (notification.recipient.toString() !== req.user?._id as any) {
+    if (notification.recipient.toString() !== (req.user?._id as any).toString()) {
       res.status(403).json({ message: 'Not authorized' });
       return;
     }

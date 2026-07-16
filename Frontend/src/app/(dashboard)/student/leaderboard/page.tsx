@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useGamificationStore } from '@/store/useGamificationStore';
+import Loading from '@/components/ui/Loading';
 
 export default function Leaderboard() {
   const { leaderboard, fetchLeaderboard, loading } = useGamificationStore();
@@ -49,11 +50,7 @@ export default function Leaderboard() {
   const dynamicData = mapRanks();
 
   if (loading && leaderboard.length === 0) {
-      return (
-         <div className="flex justify-center items-center h-64">
-            <div className="w-8 h-8 rounded-full border-4 border-blue-500 border-t-transparent animate-spin"></div>
-         </div>
-      );
+      return <Loading />;
   }
 
   return (

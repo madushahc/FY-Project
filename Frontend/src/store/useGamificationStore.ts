@@ -25,6 +25,8 @@ interface GamificationState {
   fetchBadges: () => Promise<void>;
   createBadge: (data: any) => Promise<void>;
   awardPoints: (studentId: string, points: number, reason: string) => Promise<void>;
+  toggleBadgeActive: (badgeId: string) => Promise<void>;
+  awardBadge: (studentId: string, badgeName: string) => Promise<void>;
 }
 
 export const useGamificationStore = create<GamificationState>((set) => ({
@@ -71,6 +73,33 @@ export const useGamificationStore = create<GamificationState>((set) => ({
       set({ loading: false });
     } catch (error: any) {
       set({ error: error.response?.data?.message || 'Failed to award points', loading: false });
+      throw error;
+    }
+  },
+
+  toggleBadgeActive: async (badgeId: string) => {
+    set({ loading: true, error: null });
+    try {
+      await api.put(`/gamification/badges/${badgeId}/toggle`);
+      set((state) => ({
+        badges: state.badges.map((b) =>
+          b._id === badgeId ? { ...b, active: b.active === false ? true : false } : b
+        ),
+        loading: false
+      }));
+    } catch (error: any) {
+      set({ error: error.response?.data?.message || 'Failed to toggle badge status', loading: false });
+      throw error;
+    }
+  },
+
+  awardBadge: async (studentId: string, badgeName: string) => {
+    set({ loading: true, error: null });
+    try {
+      await api.post('/gamification/award-badge', { studentId, badgeName });
+      set({ loading: false });
+    } catch (error: any) {
+      set({ error: error.response?.data?.message || 'Failed to award badge', loading: false });
       throw error;
     }
   }

@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import api from '../lib/api';
+import { create } from "zustand";
+import api from "../lib/api";
 
 interface NotificationType {
   _id: string;
@@ -21,6 +21,8 @@ interface UserState {
   fetchGamification: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   initializeUser: () => void;
+  updateProfile: (data: any) => Promise<void>;
+  fetchUserProfile: () => Promise<void>;
 }
 
 export const useUserStore = create<UserState>((set) => ({
@@ -32,18 +34,33 @@ export const useUserStore = create<UserState>((set) => ({
   error: null,
 
   initializeUser: () => {
-    if (typeof window !== 'undefined') {
-       const userStr = localStorage.getItem('user');
-       if (userStr) {
-          try { set({ user: JSON.parse(userStr) }); } catch(e) {}
-       }
+    if (typeof window !== "undefined") {
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        try {
+          set({ user: JSON.parse(userStr) });
+        } catch (e) {}
+      }
+    }
+  },
+
+  fetchUserProfile: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await api.get("/users/profile");
+      set({ user: response.data, loading: false });
+      if (typeof window !== "undefined") {
+        localStorage.setItem("user", JSON.stringify(response.data));
+      }
+    } catch (error: any) {
+      set({ error: error.message, loading: false });
     }
   },
 
   fetchNotifications: async () => {
     set({ loading: true, error: null });
     try {
-      const response = await api.get('/notifications');
+      const response = await api.get("/notifications");
       set({ notifications: response.data, loading: false });
     } catch (error: any) {
       set({ error: error.message, loading: false });
@@ -55,7 +72,7 @@ export const useUserStore = create<UserState>((set) => ({
     try {
       // we would normally have an endpoint to fetch points, maybe using user profile.
       // Assuming gamification/badges endpoint returns earned badges:
-      const response = await api.get('/gamification/badges'); 
+      const response = await api.get("/gamification/badges");
       set({ badges: response.data, loading: false });
     } catch (error: any) {
       set({ error: error.message, loading: false });
@@ -66,12 +83,33 @@ export const useUserStore = create<UserState>((set) => ({
     try {
       await api.patch(`/notifications/${id}/read`);
       set((state) => ({
-        notifications: state.notifications.map((n) => 
-          n._id === id ? { ...n, isRead: true } : n
-        )
+        notifications: state.notifications.map((n) =>
+          n._id === id ? { ...n, isRead: true } : n,
+        ),
       }));
     } catch (error) {
-      console.error('Failed to mark read', error);
+      console.error("Failed to mark read", error);
     }
-  }
+  },
+
+  updateProfile: async (data: any) => {
+    set({ loading: true, error: null });
+    try {
+      const response = await api.put("/users/profile", data, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      set({ user: response.data, loading: false });
+      if (typeof window !== "undefined") {
+        const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+        localStorage.setItem(
+          "user",
+          JSON.stringify({ ...currentUser, ...response.data }),
+        );
+      }
+    } catch (error: any) {
+      const message = error.response?.data?.message || error.message;
+      set({ error: message, loading: false });
+      throw new Error(message);
+    }
+  },
 }));

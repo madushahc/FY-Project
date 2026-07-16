@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useCourseStore } from "@/store/useCourseStore";
 import { useUserStore } from "@/store/useUserStore";
+import Loading from "@/components/ui/Loading";
 import { useGamificationStore } from "@/store/useGamificationStore";
 
 export default function StudentDashboard() {
@@ -136,9 +137,7 @@ export default function StudentDashboard() {
             </div>
 
             {courseLoading ? (
-              <div className="flex justify-center p-8 text-blue-500">
-                <div className="w-8 h-8 rounded-full border-4 border-blue-500 border-t-transparent animate-spin"></div>
-              </div>
+              <Loading />
             ) : myEnrollments.length === 0 ? (
               <div className="text-center p-6 text-slate-500">
                 <p className="mb-4">

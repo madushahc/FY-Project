@@ -9,8 +9,16 @@ export interface IUser extends Document {
   passwordHash: string;
   university: string;
   department: string;
+  phoneNumber?: string;
+  jobTitle?: string;
+  location?: string;
+  website?: string;
   points: number;
   badges: string[];
+  bio?: string;
+  profilePhoto?: string;
+  resetPasswordToken?: string | undefined;
+  resetPasswordExpires?: Date | undefined;
 }
 
 const userSchema = new Schema<IUser>(
@@ -34,8 +42,16 @@ const userSchema = new Schema<IUser>(
     passwordHash: { type: String, required: true },
     university: { type: String, required: true, trim: true },
     department: { type: String, required: true, trim: true },
+    phoneNumber: { type: String, default: "" },
+    jobTitle: { type: String, default: "" },
+    location: { type: String, default: "" },
+    website: { type: String, default: "" },
     points: { type: Number, default: 0 },
     badges: [{ type: String }],
+    bio: { type: String, default: "" },
+    profilePhoto: { type: String, default: "" },
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
   },
   {
     timestamps: true,

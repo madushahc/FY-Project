@@ -5,6 +5,7 @@ import { Clock, ArrowLeft, ArrowRight, Check, Play, AlertCircle } from 'lucide-r
 import { useQuizStore } from '@/store/useQuizStore';
 import { useCourseStore } from '@/store/useCourseStore';
 import api from '@/lib/api';
+import Loading from '@/components/ui/Loading';
 
 export default function QuizzesPage() {
   const { fetchQuizById, submitQuizAttempt } = useQuizStore();
@@ -151,7 +152,7 @@ export default function QuizzesPage() {
              <div className="p-8 md:p-10 min-h-[400px]">
                 <p className="text-blue-600 font-bold text-xs tracking-wider mb-3 uppercase">Question {currentQuestionIndex + 1}</p>
                 <h2 className="text-2xl font-medium text-slate-800 mb-8 max-w-2xl leading-snug">
-                   {q?.questionText || 'Loading question...'}
+                   {q?.text || q?.questionText || 'Loading question...'}
                 </h2>
 
                 <div className="space-y-4">
@@ -226,7 +227,7 @@ export default function QuizzesPage() {
       <h2 className="text-2xl font-semibold text-slate-800 mb-6">Available Quizzes</h2>
       
       {loadingList ? (
-         <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
+         <Loading />
       ) : quizzes.length === 0 ? (
          <div className="text-center py-12 bg-white border border-slate-200 rounded-2xl text-slate-500">No quizzes available for your courses!</div>
       ) : (

@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -13,11 +14,18 @@ import {
   GraduationCap,
   ChevronLeft,
 } from "lucide-react";
+import { useUserStore } from "@/store/useUserStore";
 
 export default function Sidebar({ role = "STUDENT" }: { role?: string }) {
   const pathname = usePathname();
   const isLecturer = role === "LECTURER";
   const isAdmin = role === "ADMIN";
+
+  const { user, initializeUser } = useUserStore();
+
+  useEffect(() => {
+    initializeUser();
+  }, [initializeUser]);
 
   const mainLinks = isAdmin
     ? [
@@ -88,14 +96,14 @@ export default function Sidebar({ role = "STUDENT" }: { role?: string }) {
 
   const roleEmoji = role === "ADMIN" ? "🛠️" : role === "LECTURER" ? "👨‍🏫" : "👨‍🎓";
 
-  const avatarInitial =
-    role === "ADMIN" ? "A" : role === "LECTURER" ? "R" : "K";
-  const avatarName =
+  const avatarName = user?.name || (
     role === "ADMIN"
       ? "Admin Perera"
       : role === "LECTURER"
         ? "Dr. Rajapaksa"
-        : "Kavitha Perera";
+        : "Kavitha Perera"
+  );
+  const avatarInitial = avatarName.charAt(0).toUpperCase();
 
   const dashboardHref = isAdmin ? "/admin" : isLecturer ? "/lecturer" : "/student";
 
@@ -177,12 +185,24 @@ export default function Sidebar({ role = "STUDENT" }: { role?: string }) {
       <div className="p-4 bg-[#111623] border-t border-[#1E293B] flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${role === "ADMIN" ? "bg-[#EF4444]" : role === "LECTURER" ? "bg-[#7C3AED]" : "bg-[#3B82F6]"}`}
+            className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs overflow-hidden ${role === "ADMIN" ? "bg-[#EF4444]" : role === "LECTURER" ? "bg-[#7C3AED]" : "bg-[#3B82F6]"}`}
           >
-            {avatarInitial}
+            {user?.profilePhoto ? (
+              <img
+                src={
+                  user.profilePhoto.startsWith("blob:")
+                    ? user.profilePhoto
+                    : `http://localhost:5000${user.profilePhoto}`
+                }
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              avatarInitial
+            )}
           </div>
           <div>
-            <p className="text-white text-xs font-medium">{avatarName}</p>
+            <p className="text-white text-xs font-medium truncate max-w-[120px]">{avatarName}</p>
             <p className="text-slate-500 text-[10px]">
               {role.charAt(0) + role.slice(1).toLowerCase()}
             </p>

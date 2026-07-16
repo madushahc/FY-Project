@@ -18,7 +18,13 @@ export const protect = async (
     req.headers.authorization.startsWith("Bearer")
   ) {
     try {
-      token = req.headers.authorization.split(" ")[1];
+      // Robustly extract token even if "Bearer " is duplicated by Swagger UI
+      token = req.headers.authorization.replace(/^Bearer\s+/i, "").trim();
+      
+      if (token.toLowerCase().startsWith("bearer ")) {
+        token = token.replace(/^bearer\s+/i, "").trim();
+      }
+
       const decoded = jwt.verify(
         token as string,
         (process.env.JWT_SECRET as string) || "secret",
@@ -26,19 +32,23 @@ export const protect = async (
 
       const user = await User.findById(decoded.id).select("-passwordHash");
       if (!user) {
-        res.status(401).json({ message: "Not authorized, user not found" });
+        res.status(401).json({ message: "Not authorized, user not found in database" });
         return;
       }
 
       req.user = user;
       next();
-    } catch (error) {
-      res.status(401).json({ message: "Not authorized, token failed" });
+    } catch (error: any) {
+      console.error("Token verification error:", error.message);
+      res.status(401).json({ 
+        message: "Not authorized, token failed",
+        details: error.message || "Unknown error verifying token"
+      });
     }
   }
 
   if (!token) {
-    res.status(401).json({ message: "Not authorized, no token" });
+    res.status(401).json({ message: "Not authorized, no token provided" });
   }
 };
 
@@ -51,7 +61,15 @@ export const authorize = (...roles: string[]) => {
       return;
     }
 
-    if (roles.length > 0 && !roles.includes(req.user.role)) {
+    const userRole = String(req.user.role || "")
+      .trim()
+      .toLowerCase();
+    const allowedRoles = roles.map((role) => String(role).trim().toLowerCase());
+
+    if (roles.length > 0 && !allowedRoles.includes(userRole)) {
+      console.log(
+        `Authorize middleware failed: User role is ${req.user.role}, required roles: ${roles.join(", ")}`,
+      );
       res.status(403).json({
         message: `Role ${req.user.role} is not authorized to access this route`,
       });
