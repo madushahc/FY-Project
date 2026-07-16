@@ -48,7 +48,7 @@ export default function Login() {
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
-        "Failed to sign in. Please check your credentials.",
+          "Failed to sign in. Please check your credentials.",
       );
     } finally {
       setLoading(false);
@@ -83,11 +83,6 @@ export default function Login() {
           <RoleSelector selectedRole={role} onChange={setRole} />
 
           <form onSubmit={handleLogin} className="space-y-5">
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm font-medium rounded-lg text-center">
-                {error}
-              </div>
-            )}
             <AuthInput
               id="email"
               type="email"
@@ -129,8 +124,12 @@ export default function Login() {
                 />
               </div>
             </div>
-
-            <button type="submit" className="btn-primary mt-6">
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-sm font-medium rounded-lg text-center">
+                {error}
+              </div>
+            )}
+            <button type="submit" className="btn-primary ">
               Sign in to EduQuest
             </button>
           </form>

@@ -20,24 +20,28 @@ interface Submission {
   feedback?: string;
   status: string;
   submittedAt: string;
+  rubricGrades?: any[];
 }
 
 interface AssignmentState {
   assignments: Assignment[];
   mySubmissions: Submission[];
+  submissions: Submission[];
   loading: boolean;
   error: string | null;
 
   fetchAssignmentsByCourse: (courseId: string) => Promise<void>;
   fetchMySubmissions: () => Promise<void>;
+  fetchSubmissionsByAssignment: (assignmentId: string) => Promise<void>;
   createAssignment: (data: any) => Promise<void>;
   submitAssignment: (assignmentId: string, formData: FormData) => Promise<void>;
-  gradeSubmission: (submissionId: string, score: number, feedback: string) => Promise<void>;
+  gradeSubmission: (submissionId: string, score: number, feedback: string, bonusPoints?: number, badgeName?: string, rubricGrades?: any[]) => Promise<void>;
 }
 
 export const useAssignmentStore = create<AssignmentState>((set, get) => ({
   assignments: [],
   mySubmissions: [],
+  submissions: [],
   loading: false,
   error: null,
 
@@ -56,6 +60,16 @@ export const useAssignmentStore = create<AssignmentState>((set, get) => ({
     try {
       const res = await api.get(`/submissions/my-submissions`);
       set({ mySubmissions: res.data, loading: false });
+    } catch (error: any) {
+      set({ error: error.response?.data?.message || 'Failed to load submissions', loading: false });
+    }
+  },
+
+  fetchSubmissionsByAssignment: async (assignmentId: string) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await api.get(`/submissions/assignment/${assignmentId}`);
+      set({ submissions: res.data, loading: false });
     } catch (error: any) {
       set({ error: error.response?.data?.message || 'Failed to load submissions', loading: false });
     }
@@ -88,10 +102,10 @@ export const useAssignmentStore = create<AssignmentState>((set, get) => ({
     }
   },
 
-  gradeSubmission: async (submissionId: string, score: number, feedback: string) => {
+  gradeSubmission: async (submissionId: string, score: number, feedback: string, bonusPoints?: number, badgeName?: string, rubricGrades?: any[]) => {
     set({ loading: true, error: null });
     try {
-      await api.put(`/submissions/${submissionId}/grade`, { score, feedback });
+      await api.put(`/submissions/${submissionId}/grade`, { score, feedback, bonusPoints, badgeName, rubricGrades });
       set({ loading: false });
     } catch (error: any) {
       set({ error: error.response?.data?.message || 'Failed to grade submission', loading: false });

@@ -1,6 +1,5 @@
 import Submission from "../models/Submission.js";
 import Assignment from "../models/Assignment.js";
-import Notification from "../models/Notification.js";
 import User from "../models/User.js";
 import { sendNotificationToUser } from "../utils/notificationService.js";
 import { checkAndAwardBadges } from "../utils/gamificationService.js";
@@ -87,43 +86,78 @@ export const getSubmissionsByAssignment = async (req, res) => {
 // @access  Lecturer, Admin
 export const gradeSubmission = async (req, res) => {
     try {
-        const { score, feedback } = req.body;
-        const submission = await Submission.findById(req.params.id).populate("assignment", "title");
+        const { score, feedback, bonusPoints, badgeName, rubricGrades } = req.body;
+        const submission = await Submission.findById(req.params.id).populate("assignment", "title points");
         if (!submission) {
             res.status(404).json({ message: "Submission not found" });
             return;
         }
-        submission.score = score;
+        if (Array.isArray(rubricGrades) && rubricGrades.length > 0) {
+            submission.rubricGrades = rubricGrades;
+            submission.score = rubricGrades.reduce((sum, rg) => sum + (Number(rg.score) || 0), 0);
+        }
+        else {
+            submission.score = score;
+        }
         submission.feedback = feedback;
         submission.status = "Graded";
         await submission.save();
+        const finalScore = submission.score || 0;
         // Create Notification for the student
         const assignmentTitle = submission.assignment.title || "Assignment";
-        await Notification.create({
-            recipient: submission.student,
+        const maxPoints = submission.assignment.points || 100;
+        let gradeMessage = `Your assignment has been graded. Score: ${finalScore}/${maxPoints}.`;
+        if (feedback) {
+            gradeMessage += ` Feedback: "${feedback}"`;
+        }
+        if (bonusPoints && bonusPoints > 0) {
+            gradeMessage += ` Bonus XP: +${bonusPoints}!`;
+        }
+        if (badgeName) {
+            gradeMessage += ` Badge Awarded: ${badgeName}!`;
+        }
+        await sendNotificationToUser(submission.student, {
             title: `Assignment Graded: ${assignmentTitle}`,
-            message: `Your assignment has been graded. You received a score of ${score}.`,
+            message: gradeMessage,
             type: "grade",
             urgency: "normal",
         });
         // Award points and badges to the student user
-        if (score > 0) {
+        if (finalScore > 0 || (bonusPoints && bonusPoints > 0) || badgeName) {
             try {
                 const studentUser = await User.findById(submission.student);
                 if (studentUser) {
-                    const pointsEarned = Math.round(score);
-                    studentUser.points += pointsEarned;
+                    let pointsEarned = finalScore > 0 ? Math.round(finalScore) : 0;
+                    let addedMsg = "";
+                    if (bonusPoints && bonusPoints > 0) {
+                        pointsEarned += Math.round(bonusPoints);
+                        addedMsg = ` (including ${bonusPoints} bonus points!)`;
+                    }
+                    if (pointsEarned > 0) {
+                        studentUser.points += pointsEarned;
+                        await sendNotificationToUser(studentUser._id, {
+                            title: `Points Earned! ⭐`,
+                            message: `You earned ${pointsEarned} points for assignment "${assignmentTitle}"${addedMsg}.`,
+                            type: "points",
+                        });
+                    }
+                    if (badgeName) {
+                        const currentBadges = Array.isArray(studentUser.badges) ? studentUser.badges : [];
+                        if (!currentBadges.includes(badgeName)) {
+                            studentUser.badges.push(badgeName);
+                            await sendNotificationToUser(studentUser._id, {
+                                title: `Badge Awarded! 🏆`,
+                                message: `The lecturer awarded you the '${badgeName}' badge for assignment "${assignmentTitle}".`,
+                                type: "award",
+                            });
+                        }
+                    }
                     await studentUser.save();
-                    await sendNotificationToUser(studentUser._id, {
-                        title: `Points Earned! ⭐`,
-                        message: `You earned ${pointsEarned} points for assignment "${assignmentTitle}".`,
-                        type: "points",
-                    });
                     await checkAndAwardBadges(studentUser);
                 }
             }
             catch (err) {
-                console.error("Failed to award points for submission grading", err);
+                console.error("Failed to award points/badges for submission grading", err);
             }
         }
         res.json(submission);

@@ -92,7 +92,7 @@ export const loginUser = async (req, res) => {
                 .toLowerCase();
             if (requestedRole && requestedRole !== actualRole) {
                 res.status(403).json({
-                    message: `This account is registered as ${user.role}, not ${role}`,
+                    message: `Please check your credentials.`,
                 });
                 return;
             }
@@ -158,7 +158,9 @@ export const resetPassword = async (req, res) => {
             resetPasswordExpires: { $gt: new Date() },
         });
         if (!user) {
-            res.status(400).json({ message: "Invalid or expired password reset token" });
+            res
+                .status(400)
+                .json({ message: "Invalid or expired password reset token" });
             return;
         }
         const salt = await bcrypt.genSalt(10);

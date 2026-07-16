@@ -1,6 +1,6 @@
-import express from 'express';
-import { enrollInCourse, getMyEnrollments, updateProgress } from '../controllers/enrollmentController.js';
-import { protect, authorize } from '../middleware/auth.js';
+import express from "express";
+import { enrollInCourse, getMyEnrollments, updateProgress, } from "../controllers/enrollmentController.js";
+import { protect, authorize } from "../middleware/auth.js";
 const router = express.Router();
 /**
  * @swagger
@@ -31,7 +31,7 @@ const router = express.Router();
  *       201:
  *         description: Successfully enrolled
  */
-router.post('/', protect, authorize('Student'), enrollInCourse);
+router.post("/", protect, authorize("Student"), enrollInCourse);
 /**
  * @swagger
  * /api/enrollments/my-enrollments:
@@ -44,7 +44,7 @@ router.post('/', protect, authorize('Student'), enrollInCourse);
  *       200:
  *         description: List of enrollments
  */
-router.get('/my-enrollments', protect, authorize('Student'), getMyEnrollments);
+router.get("/my-enrollments", protect, authorize("Student"), getMyEnrollments);
 /**
  * @swagger
  * /api/enrollments/{id}/progress:
@@ -72,6 +72,6 @@ router.get('/my-enrollments', protect, authorize('Student'), getMyEnrollments);
  *       200:
  *         description: Progress updated
  */
-router.patch('/:id/progress', protect, authorize('Student'), updateProgress);
+router.patch("/:id/progress", protect, authorize("Student"), updateProgress);
 export default router;
 //# sourceMappingURL=enrollmentRoutes.js.map

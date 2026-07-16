@@ -1,5 +1,5 @@
 import express from 'express';
-import { getBadges, createBadge, awardPoints, getLeaderboard, getPointRules, updatePointRules } from '../controllers/gamificationController.js';
+import { getBadges, createBadge, awardPoints, awardBadge, getLeaderboard, getPointRules, updatePointRules, toggleBadgeActive } from '../controllers/gamificationController.js';
 import { protect, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -53,6 +53,7 @@ const router = express.Router();
  */
 router.get('/badges', protect, getBadges);
 router.post('/badges', protect, authorize('Lecturer', 'Admin'), createBadge);
+router.put('/badges/:id/toggle', protect, authorize('Lecturer', 'Admin'), toggleBadgeActive);
 /**
  * @swagger
  * /api/gamification/award:
@@ -82,6 +83,7 @@ router.post('/badges', protect, authorize('Lecturer', 'Admin'), createBadge);
  *         description: Points awarded
  */
 router.post('/award', protect, authorize('Lecturer', 'Admin'), awardPoints);
+router.post('/award-badge', protect, authorize('Lecturer', 'Admin'), awardBadge);
 
 /**
  * @swagger

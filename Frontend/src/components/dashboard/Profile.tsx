@@ -10,6 +10,14 @@ export default function Profile() {
   const { user, initializeUser, updateProfile } = useUserStore();
   const [notifications, setNotifications] = useState<any[]>([]);
 
+  const [stats, setStats] = useState({
+    coursesEnrolled: 0,
+    assignmentsSubmitted: 0,
+    quizzesAttempted: 0,
+    forumPosts: 0
+  });
+  const [loadingStats, setLoadingStats] = useState(true);
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -80,6 +88,28 @@ export default function Profile() {
     };
     fetchNotifications();
   }, [initializeUser]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (user?.role === "Student") {
+        setLoadingStats(true);
+        try {
+          const res = await api.get("/users/profile/stats");
+          setStats(res.data || {
+            coursesEnrolled: 0,
+            assignmentsSubmitted: 0,
+            quizzesAttempted: 0,
+            forumPosts: 0
+          });
+        } catch (err) {
+          console.error("Failed to load student stats", err);
+        } finally {
+          setLoadingStats(false);
+        }
+      }
+    };
+    fetchStats();
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -430,40 +460,46 @@ export default function Profile() {
               {user?.role === "Student" && (
                 <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
                   <h3 className="font-bold text-slate-800 mb-4">Quick Stats</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-blue-50 rounded-xl p-4 text-center">
-                      <div className="text-3xl font-bold text-blue-600 mb-1">
-                        4
+                  {loadingStats ? (
+                    <div className="h-20 flex items-center justify-center text-xs text-slate-400 font-semibold animate-pulse">
+                      Loading statistics...
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-blue-50 rounded-xl p-4 text-center">
+                        <div className="text-3xl font-bold text-blue-600 mb-1">
+                          {stats.coursesEnrolled}
+                        </div>
+                        <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
+                          Courses Enrolled
+                        </div>
                       </div>
-                      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
-                        Courses Enrolled
+                      <div className="bg-slate-50 rounded-xl p-4 text-center">
+                        <div className="text-3xl font-bold text-blue-600 mb-1">
+                          {stats.assignmentsSubmitted}
+                        </div>
+                        <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
+                          Assignments Submitted
+                        </div>
+                      </div>
+                      <div className="bg-blue-50 rounded-xl p-4 text-center">
+                        <div className="text-3xl font-bold text-blue-600 mb-1">
+                          {stats.quizzesAttempted}
+                        </div>
+                        <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
+                          Quizzes Attempted
+                        </div>
+                      </div>
+                      <div className="bg-slate-50 rounded-xl p-4 text-center">
+                        <div className="text-3xl font-bold text-blue-600 mb-1">
+                          {stats.forumPosts}
+                        </div>
+                        <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
+                          Forum Posts
+                        </div>
                       </div>
                     </div>
-                    <div className="bg-slate-50 rounded-xl p-4 text-center">
-                      <div className="text-3xl font-bold text-blue-600 mb-1">
-                        12
-                      </div>
-                      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
-                        Assignments Submitted
-                      </div>
-                    </div>
-                    <div className="bg-blue-50 rounded-xl p-4 text-center">
-                      <div className="text-3xl font-bold text-blue-600 mb-1">
-                        8
-                      </div>
-                      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
-                        Quizzes Attempted
-                      </div>
-                    </div>
-                    <div className="bg-slate-50 rounded-xl p-4 text-center">
-                      <div className="text-3xl font-bold text-blue-600 mb-1">
-                        7
-                      </div>
-                      <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">
-                        Forum Posts
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               )}
             </>

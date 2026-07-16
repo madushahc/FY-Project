@@ -142,14 +142,14 @@ export const updateProgress = async (
         if (studentUser) {
           studentUser.points += 200;
           await studentUser.save();
-          
+
           await sendNotificationToUser(studentUser._id, {
             title: `Course Completed! 🎉`,
             message: `Congratulations! You have completed the course "${course?.title || 'Course'}" and earned 200 XP!`,
             type: "award",
             linkUrl: `/student/courses/${enrollment.course}`
           });
-          
+
           await checkAndAwardBadges(studentUser);
         }
       } catch (err) {

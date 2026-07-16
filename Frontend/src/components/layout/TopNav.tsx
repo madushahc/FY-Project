@@ -20,6 +20,7 @@ export default function TopNav({
     notifications = [],
     fetchNotifications,
     markAsRead,
+    fetchUserProfile,
   } = useUserStore();
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export default function TopNav({
     if (typeof window !== "undefined") {
       initializeUser();
       if (fetchNotifications) fetchNotifications().catch(() => {});
+      if (fetchUserProfile) fetchUserProfile().catch(() => {});
     }
 
     function handleClickOutside(event: MouseEvent) {
@@ -171,22 +173,25 @@ export default function TopNav({
         {/* Profile */}
         <Link
           href={`/${role.toLowerCase()}/profile`}
-          className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 bg-slate-100 hover:ring-2 hover:ring-blue-500 transition cursor-pointer"
+          className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 bg-[#2A61D8] flex items-center justify-center text-white font-bold text-sm hover:ring-2 hover:ring-blue-500 transition cursor-pointer"
         >
           {(() => {
             const photo = user?.profilePhoto as string | undefined;
-            const avatarSrc = photo
-              ? photo.startsWith("blob:")
+            if (photo) {
+              const avatarSrc = photo.startsWith("blob:")
                 ? photo
-                : `http://localhost:5000${photo}`
-              : `https://api.dicebear.com/7.x/notionists/svg?seed=${encodeURIComponent(user?.name || role)}`;
-            return (
-              <img
-                src={avatarSrc}
-                alt="avatar"
-                className="w-full h-full object-cover"
-              />
-            );
+                : `http://localhost:5000${photo}`;
+              return (
+                <img
+                  src={avatarSrc}
+                  alt="avatar"
+                  className="w-full h-full object-cover"
+                />
+              );
+            } else {
+              const initials = user?.name ? user.name.charAt(0).toUpperCase() : "U";
+              return <span>{initials}</span>;
+            }
           })()}
         </Link>
       </div>

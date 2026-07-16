@@ -22,7 +22,7 @@ export const markAsRead = async (req, res) => {
             res.status(404).json({ message: 'Notification not found' });
             return;
         }
-        if (notification.recipient.toString() !== req.user?._id) {
+        if (notification.recipient.toString() !== (req.user?._id).toString()) {
             res.status(403).json({ message: 'Not authorized' });
             return;
         }

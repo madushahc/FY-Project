@@ -1,5 +1,9 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import Enrollment from "../models/Enrollment.js";
+import Submission from "../models/Submission.js";
+import QuizAttempt from "../models/QuizAttempt.js";
+import ForumPost from "../models/ForumPost.js";
 // @desc    Get all users
 // @route   GET /api/users
 // @access  Admin
@@ -9,6 +13,23 @@ export const getUsers = async (req, res) => {
             .select("-passwordHash")
             .sort({ createdAt: -1 });
         res.json(users);
+    }
+    catch (error) {
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+// @desc    Get user profile
+// @route   GET /api/users/profile
+// @access  Private (Any authenticated user)
+export const getProfile = async (req, res) => {
+    try {
+        const user = req.user;
+        if (!user) {
+            res.status(401).json({ message: "Not authorized" });
+            return;
+        }
+        const latestUser = await User.findById(user._id).select("-passwordHash");
+        res.json(latestUser);
     }
     catch (error) {
         res.status(500).json({ message: "Server Error" });
@@ -233,6 +254,37 @@ export const deleteUser = async (req, res) => {
     }
     catch (error) {
         res.status(500).json({ message: "Server Error", error: error.message });
+    }
+};
+// @desc    Get student profile quick stats
+// @route   GET /api/users/profile/stats
+// @access  Private (Student)
+export const getStudentStats = async (req, res) => {
+    try {
+        const userId = req.user?._id;
+        if (!userId) {
+            res.status(401).json({ message: "Not authorized" });
+            return;
+        }
+        // 1. Courses Enrolled
+        const coursesEnrolled = await Enrollment.countDocuments({ student: userId });
+        // 2. Assignments Submitted
+        const assignmentsSubmitted = await Submission.countDocuments({ student: userId });
+        // 3. Quizzes Attempted
+        const quizzesAttempted = await QuizAttempt.countDocuments({ student: userId });
+        // 4. Forum Contributions
+        const forumPostsCount = await ForumPost.countDocuments({ author: userId });
+        const forumRepliesCount = await ForumPost.countDocuments({ "replies.author": userId });
+        const forumPosts = forumPostsCount + forumRepliesCount;
+        res.json({
+            coursesEnrolled,
+            assignmentsSubmitted,
+            quizzesAttempted,
+            forumPosts,
+        });
+    }
+    catch (error) {
+        res.status(500).json({ message: "Server Error" });
     }
 };
 //# sourceMappingURL=userController.js.map

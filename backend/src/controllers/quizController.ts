@@ -156,13 +156,13 @@ export const submitQuizAttempt = async (
         if (studentUser) {
           studentUser.points += earnedPoints;
           await studentUser.save();
-          
+
           await sendNotificationToUser(studentUser._id, {
             title: `Points Earned! ⭐`,
             message: `You earned ${earnedPoints} points for attempting the quiz "${quiz.title}".`,
             type: "points",
           });
-          
+
           await checkAndAwardBadges(studentUser);
         }
       } catch (err) {

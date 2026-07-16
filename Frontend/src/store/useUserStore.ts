@@ -22,6 +22,7 @@ interface UserState {
   markAsRead: (id: string) => Promise<void>;
   initializeUser: () => void;
   updateProfile: (data: any) => Promise<void>;
+  fetchUserProfile: () => Promise<void>;
 }
 
 export const useUserStore = create<UserState>((set) => ({
@@ -40,6 +41,19 @@ export const useUserStore = create<UserState>((set) => ({
           set({ user: JSON.parse(userStr) });
         } catch (e) {}
       }
+    }
+  },
+
+  fetchUserProfile: async () => {
+    set({ loading: true, error: null });
+    try {
+      const response = await api.get("/users/profile");
+      set({ user: response.data, loading: false });
+      if (typeof window !== "undefined") {
+        localStorage.setItem("user", JSON.stringify(response.data));
+      }
+    } catch (error: any) {
+      set({ error: error.message, loading: false });
     }
   },
 

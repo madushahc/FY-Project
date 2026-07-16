@@ -9,6 +9,11 @@ export interface ISubmission extends Document {
     score?: number;
     feedback?: string;
     isLate: boolean;
+    rubricGrades?: {
+        criteria: string;
+        points: number;
+        score: number;
+    }[];
 }
 declare const _default: mongoose.Model<ISubmission, {}, {}, {}, mongoose.Document<unknown, {}, ISubmission, {}, mongoose.DefaultSchemaOptions> & ISubmission & Required<{
     _id: mongoose.Types.ObjectId;

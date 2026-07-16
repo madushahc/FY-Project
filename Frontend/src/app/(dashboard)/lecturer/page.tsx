@@ -177,16 +177,16 @@ export default function LecturerDashboard() {
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
              <h3 className="font-semibold text-slate-800 mb-4">Quick Actions</h3>
-             <div className="space-y-2">
+              <div className="space-y-2">
                 <Link href="/lecturer/courses" className="block text-center w-full bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium hover:bg-blue-700 transition shadow-sm">
                   + Create Course
                 </Link>
-                <button className="w-full bg-slate-100 text-slate-700 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-200 transition">
+                <Link href="/lecturer/activities" className="block text-center w-full bg-slate-100 text-slate-700 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-200 transition">
                   <span className="mr-2">📝</span> Grade Assignments
-                </button>
-                <button className="w-full bg-slate-100 text-slate-700 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-200 transition">
+                </Link>
+                <Link href="/lecturer/gamification" className="block text-center w-full bg-slate-100 text-slate-700 rounded-lg py-2.5 text-sm font-medium hover:bg-slate-200 transition">
                   <span className="mr-2">🎮</span> Game Settings
-                </button>
+                </Link>
              </div>
           </div>
         </div>

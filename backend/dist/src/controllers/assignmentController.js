@@ -50,4 +50,17 @@ export const gradeSubmission = async (req, res) => {
         res.status(400).json({ message: 'Grading failed' });
     }
 };
+export const getAssignmentById = async (req, res) => {
+    try {
+        const assignment = await Assignment.findById(req.params.id);
+        if (!assignment) {
+            res.status(404).json({ message: 'Assignment not found' });
+            return;
+        }
+        res.json(assignment);
+    }
+    catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
 //# sourceMappingURL=assignmentController.js.map

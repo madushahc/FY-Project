@@ -1,5 +1,5 @@
 import express from 'express';
-import { createAssignment, getAssignmentsByCourse, submitAssignment, gradeSubmission } from '../controllers/assignmentController.js';
+import { createAssignment, getAssignmentsByCourse, submitAssignment, gradeSubmission, getAssignmentById } from '../controllers/assignmentController.js';
 import { protect, authorize } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 
@@ -65,6 +65,7 @@ router.post('/', protect, authorize('Lecturer', 'Admin'), createAssignment);
  *         description: List of assignments
  */
 router.get('/course/:courseId', protect, getAssignmentsByCourse);
+router.get('/:id', protect, getAssignmentById);
 
 /**
  * @swagger

@@ -11,6 +11,7 @@ export default function LecturerStudents() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('All');
+  const [viewingStudent, setViewingStudent] = useState<any | null>(null);
 
   useEffect(() => {
      const fetchData = async () => {
@@ -217,7 +218,10 @@ export default function LecturerStudents() {
                         </span>
                      </td>
                      <td className="py-4 pr-6 pl-4 text-right">
-                        <button className="px-4 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
+                        <button 
+                           onClick={() => setViewingStudent(student)}
+                           className="px-4 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition"
+                        >
                            View
                         </button>
                      </td>
@@ -226,6 +230,78 @@ export default function LecturerStudents() {
             </tbody>
          </table>
       </div>
+      )}
+
+      {/* Student Details Modal */}
+      {viewingStudent && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                  {viewingStudent.initial}
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-base">{viewingStudent.name}</h3>
+                  <p className="text-xs text-slate-400 font-medium">{viewingStudent.email}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setViewingStudent(null)}
+                className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-650 transition"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 block mb-1">Total Points</span>
+                  <span className="text-xl font-bold text-blue-600">⭐ {viewingStudent.pts} XP</span>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 block mb-1">Average Completion</span>
+                  <span className="text-xl font-bold text-purple-600">📊 {viewingStudent.completion}%</span>
+                </div>
+              </div>
+              
+              {/* Course Progress List */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-slate-650 uppercase tracking-wider">Enrolled Courses & Progress</h4>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                  {viewingStudent.enrollments.map((enrollment: any, idx: number) => (
+                    <div key={idx} className="border border-slate-100 p-4 rounded-2xl bg-white hover:bg-slate-50/50 transition">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-slate-800">{enrollment.courseTitle}</span>
+                        <span className="text-xs font-bold text-blue-600">{enrollment.progress}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-2">
+                        <div 
+                          className="bg-blue-500 h-2 rounded-full transition-all duration-350" 
+                          style={{ width: `${enrollment.progress}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Modal Footer */}
+            <div className="p-5 border-t border-slate-100 flex items-center justify-end bg-slate-50/50">
+              <button 
+                onClick={() => setViewingStudent(null)}
+                className="px-5 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition shadow-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

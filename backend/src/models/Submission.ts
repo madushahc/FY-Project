@@ -10,6 +10,11 @@ export interface ISubmission extends Document {
   score?: number;
   feedback?: string;
   isLate: boolean;
+  rubricGrades?: {
+    criteria: string;
+    points: number;
+    score: number;
+  }[];
 }
 
 const SubmissionSchema = new Schema<ISubmission>({
@@ -21,7 +26,12 @@ const SubmissionSchema = new Schema<ISubmission>({
   status: { type: String, enum: ['Pending Grade', 'Graded'], default: 'Pending Grade' },
   score: { type: Number },
   feedback: { type: String },
-  isLate: { type: Boolean, default: false }
+  isLate: { type: Boolean, default: false },
+  rubricGrades: [{
+    criteria: { type: String, required: true },
+    points: { type: Number, required: true },
+    score: { type: Number, required: true }
+  }]
 }, {
   timestamps: true
 });

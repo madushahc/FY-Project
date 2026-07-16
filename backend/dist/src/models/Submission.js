@@ -8,7 +8,12 @@ const SubmissionSchema = new Schema({
     status: { type: String, enum: ['Pending Grade', 'Graded'], default: 'Pending Grade' },
     score: { type: Number },
     feedback: { type: String },
-    isLate: { type: Boolean, default: false }
+    isLate: { type: Boolean, default: false },
+    rubricGrades: [{
+            criteria: { type: String, required: true },
+            points: { type: Number, required: true },
+            score: { type: Number, required: true }
+        }]
 }, {
     timestamps: true
 });

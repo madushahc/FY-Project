@@ -122,7 +122,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 
       if (requestedRole && requestedRole !== actualRole) {
         res.status(403).json({
-          message: `This account is registered as ${user.role}, not ${role}`,
+          message: `Please check your credentials.`,
         });
         return;
       }
@@ -204,7 +204,9 @@ export const resetPassword = async (
     });
 
     if (!user) {
-      res.status(400).json({ message: "Invalid or expired password reset token" });
+      res
+        .status(400)
+        .json({ message: "Invalid or expired password reset token" });
       return;
     }
 

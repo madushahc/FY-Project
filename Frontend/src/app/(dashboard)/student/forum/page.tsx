@@ -166,8 +166,8 @@ export default function DiscussionForum() {
   const displayPosts =
     activeTab === "My Posts"
       ? posts.filter(
-          (p) => p.author?._id === user?._id || p.author === user?._id,
-        )
+        (p) => p.author?._id === user?._id || p.author === user?._id,
+      )
       : posts;
 
   // Fallback avatars/colors based on ID string
@@ -199,11 +199,10 @@ export default function DiscussionForum() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                activeTab === tab
+              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${activeTab === tab
                   ? "bg-slate-100 text-blue-600"
                   : "text-slate-500 hover:text-slate-700"
-              }`}
+                }`}
             >
               {tab}
             </button>
@@ -286,13 +285,7 @@ export default function DiscussionForum() {
                       {post.replies?.length || 0} replies
                     </button>
                   </div>
-                  {/* Likes list */}
-                  {post.likedBy && post.likedBy.length > 0 && (
-                    <div className="mt-3 text-sm text-slate-600">
-                      Liked by:{" "}
-                      {post.likedBy.map((u: any) => u.name).join(", ")}
-                    </div>
-                  )}
+
 
                   {/* Replies */}
                   {showReplies[post._id] && (
