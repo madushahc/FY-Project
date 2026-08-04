@@ -165,7 +165,7 @@ export default function InteractiveVideoPlayer({
       });
       if (data.watchPercent !== undefined) setWatchPercent(data.watchPercent);
       if (data.videoWatched !== undefined) setVideoWatched(data.videoWatched);
-      if (data.isLessonCompleted) {
+      if (data.isLessonCompleted || pct >= minWatchPercentRequired) {
         if (!isCompletedRef.current) {
           isCompletedRef.current = true;
           setIsCompleted(true);
