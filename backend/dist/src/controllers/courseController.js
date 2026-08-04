@@ -14,7 +14,22 @@ import { sendNotificationsToUsers } from "../utils/notificationService.js";
 // @route   GET /api/courses
 export const getCourses = async (req, res) => {
     try {
-        const filter = req.user?.role === "Student" ? { status: "Published" } : {};
+        let filter = {};
+        const roleNormalized = (req.user?.role || "").toLowerCase();
+        if (roleNormalized === "student") {
+            filter = { status: "Published" };
+        }
+        else if (roleNormalized === "lecturer") {
+            const userObjId = req.user?._id && mongoose.Types.ObjectId.isValid(String(req.user._id))
+                ? new mongoose.Types.ObjectId(String(req.user._id))
+                : req.user?._id;
+            filter = {
+                $or: [
+                    { instructor: req.user?._id },
+                    { instructor: userObjId }
+                ]
+            };
+        }
         const courses = await Course.find(filter)
             .populate("instructor", "name email")
             .lean();

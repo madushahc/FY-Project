@@ -22,6 +22,8 @@ export interface IStudentProgress extends Document {
     completed: boolean;
     completedAt?: Date;
     totalPointsEarned: number;
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 declare const _default: mongoose.Model<IStudentProgress, {}, {}, {}, mongoose.Document<unknown, {}, IStudentProgress, {}, mongoose.DefaultSchemaOptions> & IStudentProgress & Required<{
     _id: mongoose.Types.ObjectId;
