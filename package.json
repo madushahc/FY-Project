@@ -1,6 +1,10 @@
 {
   "name": "fy-project",
   "private": true,
+  "workspaces": [
+    "Frontend",
+    "backend"
+  ],
   "scripts": {
     "start": "npm --prefix backend start",
     "build": "npm --prefix backend run build && npm --prefix Frontend run build",
