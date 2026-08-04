@@ -64,7 +64,7 @@ const checkAndMarkLessonCompletion = async (studentId, courseId, lessonId, lesso
     const isReadingSatisfied = !isReadingLesson || ((progress.watchPercent || 0) >= 90);
     // Require at least one completion criterion to exist (video, reading, QR, or question).
     const hasAnyRequirement = totalQrRequired > 0 || totalQuestionsRequired > 0 || isVideoLesson || isReadingLesson;
-    if (hasAnyRequirement && allQrScanned && allQuestionsPassed && isVideoSatisfied && isReadingSatisfied) {
+    if (hasAnyRequirement && (isVideoSatisfied || isReadingSatisfied || (allQrScanned && allQuestionsPassed))) {
         progress.completed = true;
         if (!progress.completedAt) {
             progress.completedAt = new Date();
