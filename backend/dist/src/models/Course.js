@@ -57,7 +57,7 @@ const CourseSchema = new Schema({
     status: { type: String, enum: ['Published', 'Draft'], default: 'Draft' },
     enrollmentType: { type: String, enum: ['Open', 'Restricted'], default: 'Open' },
     completionRules: {
-        minLessonWatchPercent: { type: Number, default: 80 },
+        minLessonWatchPercent: { type: Number, default: 75 },
         minQuizPassScore: { type: Number, default: 60 },
         requireAllAssignments: { type: Boolean, default: true }
     }
