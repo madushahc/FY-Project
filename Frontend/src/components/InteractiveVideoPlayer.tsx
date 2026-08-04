@@ -1,20 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { QrCode, CheckCircle2, AlertCircle, Award, HelpCircle, Lock, Play, Pause, RefreshCw, Clock, Camera } from "lucide-react";
+import { CheckCircle2, AlertCircle, Award, HelpCircle, Lock, Play, Pause, RefreshCw, Clock } from "lucide-react";
 import api from "@/lib/api";
-import { generateQrSvgDataUrl, generateLessonQrPayload } from "@/lib/qrCodeHelper";
 import TermMatchingTask, { IMatchingPair } from "@/components/TermMatchingTask";
-import CameraQrScanner from "@/components/CameraQrScanner";
-
-export interface IQrMarker {
-  _id?: string;
-  timestamp: number;
-  code: string;
-  label?: string;
-  points?: number;
-  timerSeconds?: number;
-}
 
 export interface IQuestionMarker {
   _id?: string;
@@ -33,7 +22,6 @@ interface Props {
   videoUrl: string;
   courseId: string;
   lessonId: string;
-  qrMarkers?: IQrMarker[];
   questionMarkers?: IQuestionMarker[];
   onCompletionChange?: (isCompleted: boolean, progressData: any) => void;
   onUnlockNextLesson?: (lessonId: string, data: any) => void;
@@ -44,7 +32,6 @@ export default function InteractiveVideoPlayer({
   videoUrl,
   courseId,
   lessonId,
-  qrMarkers = [],
   questionMarkers = [],
   onCompletionChange,
   onUnlockNextLesson,
@@ -67,7 +54,6 @@ export default function InteractiveVideoPlayer({
   const [showCompletionBanner, setShowCompletionBanner] = useState<boolean>(false);
   const [loadingProgress, setLoadingProgress] = useState<boolean>(true);
   const [seekingWarning, setSeekingWarning] = useState<string | null>(null);
-  const [showCameraScanner, setShowCameraScanner] = useState<boolean>(false);
 
   // Refs that mirror state for use inside event handlers (avoids stale closures)
   const maxWatchedTimeRef = useRef<number>(0);
@@ -75,43 +61,9 @@ export default function InteractiveVideoPlayer({
   const seekWarningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Interactive UI modals
-  const [activeQrMarker, setActiveQrMarker] = useState<IQrMarker | null>(null);
   const [activeQuestionMarker, setActiveQuestionMarker] = useState<IQuestionMarker | null>(null);
-  const [inputQrCode, setInputQrCode] = useState<string>("");
-  const [qrError, setQrError] = useState<string>("");
   const [questionTimer, setQuestionTimer] = useState<number>(30);
-  const [qrTimer, setQrTimer] = useState<number>(30);
   const [dismissedMarkerCodes, setDismissedMarkerCodes] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (!activeQrMarker) return;
-
-    const totalSeconds = activeQrMarker.timerSeconds || 30;
-    setQrTimer(totalSeconds);
-
-    const interval = setInterval(() => {
-      setQrTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          // Timer expired without response: dismiss QR modal, mark as handled so it never triggers again, and resume playback
-          const codeToDismiss = activeQrMarker.code;
-          setDismissedMarkerCodes((prevList) => [...prevList, codeToDismiss]);
-          setTimeout(() => {
-            setActiveQrMarker(null);
-            setShowCameraScanner(false);
-            if (videoRef.current) {
-              videoRef.current.play().catch(() => {});
-              setIsPlaying(true);
-            }
-          }, 0);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [activeQrMarker]);
 
   useEffect(() => {
     if (!activeQuestionMarker) return;
@@ -287,19 +239,6 @@ export default function InteractiveVideoPlayer({
         }
       }
     });
-
-    // Check Engagement Check-in Marker triggers (pause video when reaching timestamp)
-    qrMarkers.forEach((qr) => {
-      const isScanned = scannedQrCodes.includes(qr.code);
-      const isDismissed = dismissedMarkerCodes.includes(qr.code);
-      if (!isScanned && !isDismissed && Math.abs(time - qr.timestamp) < 2.0) {
-        if (!activeQrMarker || activeQrMarker.code !== qr.code) {
-          videoRef.current?.pause();
-          setIsPlaying(false);
-          setActiveQrMarker(qr);
-        }
-      }
-    });
   };
 
   const handleLoadedMetadata = () => {
@@ -309,51 +248,6 @@ export default function InteractiveVideoPlayer({
       if (maxWatchedTimeRef.current > 0 && !isCompletedRef.current && videoRef.current.currentTime < maxWatchedTimeRef.current) {
         videoRef.current.currentTime = maxWatchedTimeRef.current;
       }
-    }
-  };
-
-  // Submit QR Code Verification
-  const handleVerifyQr = async (codeToSubmit?: string) => {
-    const code = codeToSubmit || inputQrCode.trim();
-    if (!code || !activeQrMarker) return;
-
-    setScanningQr(true);
-    setQrError("");
-
-    try {
-      const { data } = await api.post(`/courses/${courseId}/lessons/${lessonId}/qr-scan`, { code });
-
-      setScannedQrCodes(data.scannedQrCodes);
-      setToastMessage({ text: "QR Code Scanned Successfully!", points: data.pointsAwarded });
-
-      if (data.pointsAwarded > 0 && onPointsAwarded) {
-        onPointsAwarded(data.pointsAwarded, "QR Code Scan");
-      }
-
-      if (data.isLessonCompleted) {
-        if (!isCompletedRef.current) {
-          isCompletedRef.current = true;
-          setIsCompleted(true);
-          setShowCompletionBanner(true);
-          if (onCompletionChange) {
-            onCompletionChange(true, data);
-          }
-        }
-      }
-
-      // Close modal and immediately resume video playback
-      setActiveQrMarker(null);
-      setShowCameraScanner(false);
-      setInputQrCode("");
-      if (videoRef.current) {
-        videoRef.current.play().catch(() => {});
-        setIsPlaying(true);
-      }
-      fetchProgress();
-    } catch (err: any) {
-      setQrError(err.response?.data?.message || "Invalid QR Code verification code.");
-    } finally {
-      setScanningQr(false);
     }
   };
 
@@ -428,8 +322,6 @@ export default function InteractiveVideoPlayer({
     return `${m}:${s < 10 ? "0" : ""}${s}`;
   };
 
-  const totalQr = qrMarkers.length;
-  const scannedCount = scannedQrCodes.length;
   const totalQ = questionMarkers.length;
   const answeredCorrectCount = answeredQuestions.filter((q) => q.isCorrect).length;
 
@@ -508,92 +400,6 @@ export default function InteractiveVideoPlayer({
             >
               ✓ Continue
             </button>
-          </div>
-        )}
-
-        {/* Video Overlay: Active Interactive Lesson Rating & Feedback Check-in */}
-        {activeQrMarker && (
-          <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-md z-40 flex items-center justify-center p-4 animate-in fade-in">
-            <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl border border-slate-100 relative">
-              <button
-                onClick={() => {
-                  if (activeQrMarker) {
-                    setDismissedMarkerCodes((prev) => [...prev, activeQrMarker.code]);
-                  }
-                  setActiveQrMarker(null);
-                  if (videoRef.current) {
-                    videoRef.current.play().catch(() => {});
-                    setIsPlaying(true);
-                  }
-                }}
-                className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 font-bold text-sm"
-              >
-                ✕
-              </button>
-              <div className="flex items-center justify-between gap-2 mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center shrink-0 text-xl">
-                    ⭐
-                  </div>
-                  <div className="text-left">
-                    <h3 className="text-sm font-bold text-slate-800">
-                      {activeQrMarker.label || "Lesson Feedback & Check-in"}
-                    </h3>
-                    <span className="text-[10px] text-amber-600 font-extrabold">+{activeQrMarker.points || 15} PTS</span>
-                  </div>
-                </div>
-                <div className={`px-2.5 py-1 rounded-full border font-mono font-bold text-xs flex items-center gap-1 shrink-0 ${qrTimer <= 5
-                  ? "bg-red-50 border-red-300 text-red-600 animate-pulse"
-                  : "bg-amber-50 border-amber-200 text-amber-800"
-                  }`}>
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>00:{qrTimer < 10 ? `0${qrTimer}` : qrTimer}s</span>
-                </div>
-              </div>
-
-              <div className="p-3 bg-amber-50/80 rounded-2xl border border-amber-200/70 text-amber-900 mb-4 text-center">
-                <p className="text-xs font-bold mb-1">💬 {activeQrMarker.label || "How is this video lesson going so far?"}</p>
-                <p className="text-[11px] text-amber-700 font-medium">
-                  Rate or select quick feedback to claim your +{activeQrMarker.points || 15} XP reward!
-                </p>
-              </div>
-
-              {/* Interactive Star Rating */}
-              <div className="flex justify-center gap-2 mb-4">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    onClick={() => handleVerifyQr(activeQrMarker.code)}
-                    disabled={scanningQr}
-                    className="p-2 text-2xl hover:scale-125 transition-transform cursor-pointer"
-                    title={`Rate ${star} Stars`}
-                  >
-                    ⭐
-                  </button>
-                ))}
-              </div>
-
-              {/* Quick Feedback Chips */}
-              <div className="space-y-2 mb-3">
-                {[
-                  "🎯 Clear & easy to follow!",
-                  "⚡ Great explanation & pacing!",
-                  "💡 Good content, ready for more!"
-                ].map((chip, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleVerifyQr(activeQrMarker.code)}
-                    disabled={scanningQr}
-                    className="w-full p-2.5 bg-slate-50 hover:bg-amber-100/60 border border-slate-200 hover:border-amber-400 text-slate-700 font-bold text-xs rounded-xl transition text-left flex items-center justify-between"
-                  >
-                    <span>{chip}</span>
-                    <span className="text-amber-600 text-[10px] font-extrabold">+15 PTS</span>
-                  </button>
-                ))}
-              </div>
-
-              {qrError && <p className="text-xs text-red-500 font-bold mb-2">{qrError}</p>}
-            </div>
           </div>
         )}
 

@@ -1,13 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface IQrMarker {
-  _id?: mongoose.Types.ObjectId;
-  timestamp: number; // In seconds
-  code: string; // Unique QR code string
-  label?: string;
-  points?: number;
-}
-
 export interface IMatchingPair {
   term: string;
   definition: string;
@@ -34,7 +26,6 @@ export interface ILesson {
   refId?: mongoose.Types.ObjectId; // Reference to Quiz or Assignment if type matches
   points?: number; // Gamification points for completing this specific lesson
   description?: string;
-  qrMarkers?: IQrMarker[];
   questionMarkers?: IQuestionMarker[];
 }
 
@@ -95,14 +86,6 @@ const CourseSchema = new Schema<ICourse>({
           refId: { type: Schema.Types.ObjectId },
           points: { type: Number, default: 10 },
           description: { type: String },
-          qrMarkers: [
-            {
-              timestamp: { type: Number, required: true },
-              code: { type: String, required: true },
-              label: { type: String, default: 'Scan QR Code' },
-              points: { type: Number, default: 15 }
-            }
-          ],
           questionMarkers: [
             {
               timestamp: { type: Number, required: true },

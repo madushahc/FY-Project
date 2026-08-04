@@ -25,7 +25,6 @@ const findOrCreateStudentProgress = async (student, course, lessonId) => {
                 student,
                 course,
                 lessonId,
-                scannedQrCodes: [],
                 answeredQuestions: [],
                 watchPercent: 0,
                 maxWatchedTime: 0,
@@ -43,16 +42,13 @@ const findOrCreateStudentProgress = async (student, course, lessonId) => {
     }
     return progress;
 };
-// Check and trigger lesson completion if all QR, question markers, and watch percentage requirements are satisfied
+// Check and trigger lesson completion if question markers and watch percentage requirements are satisfied
 const checkAndMarkLessonCompletion = async (studentId, courseId, lessonId, lesson) => {
     const progress = await StudentProgress.findOne({ student: studentId, course: courseId, lessonId });
     if (!progress)
         return false;
-    const totalQrRequired = lesson.qrMarkers?.length || 0;
     const totalQuestionsRequired = lesson.questionMarkers?.length || 0;
-    const scannedCount = progress.scannedQrCodes?.length || 0;
     const correctlyAnsweredCount = progress.answeredQuestions?.filter(q => q.isCorrect).length || 0;
-    const allQrScanned = totalQrRequired === 0 || scannedCount >= totalQrRequired;
     const allQuestionsPassed = totalQuestionsRequired === 0 || correctlyAnsweredCount >= totalQuestionsRequired;
     const course = await Course.findById(courseId);
     const minWatchPercent = course?.completionRules?.minLessonWatchPercent || 75;
@@ -62,9 +58,9 @@ const checkAndMarkLessonCompletion = async (studentId, courseId, lessonId, lesso
     const isVideoLesson = typeStr === 'video' || (!isNonVideoType && Boolean(lesson.contentUrl || lesson.videoUrl));
     const isVideoSatisfied = !isVideoLesson || Boolean(progress.videoWatched) || ((progress.watchPercent || 0) >= 100);
     const isReadingSatisfied = !isReadingLesson || ((progress.watchPercent || 0) >= 90);
-    // Require at least one completion criterion to exist (video, reading, QR, or question).
-    const hasAnyRequirement = totalQrRequired > 0 || totalQuestionsRequired > 0 || isVideoLesson || isReadingLesson;
-    if (hasAnyRequirement && allQrScanned && allQuestionsPassed && isVideoSatisfied && isReadingSatisfied) {
+    // Require at least one completion criterion to exist (video, reading, or question).
+    const hasAnyRequirement = totalQuestionsRequired > 0 || isVideoLesson || isReadingLesson;
+    if (hasAnyRequirement && allQuestionsPassed && isVideoSatisfied && isReadingSatisfied) {
         progress.completed = true;
         if (!progress.completedAt) {
             progress.completedAt = new Date();
@@ -94,84 +90,6 @@ const checkAndMarkLessonCompletion = async (studentId, courseId, lessonId, lesso
         return true;
     }
     return progress.completed;
-};
-// @desc Record QR Code scan by student during video playback
-// @route POST /api/courses/:courseId/lessons/:lessonId/qr-scan
-export const recordQrScan = async (req, res) => {
-    try {
-        let courseId = String(req.params.courseId || req.body.courseId || "");
-        let lessonId = String(req.params.lessonId || req.body.lessonId || "");
-        const { code } = req.body;
-        const userId = req.user?._id?.toString();
-        if (!userId || !code) {
-            res.status(401).json({ message: "Not authorized or missing QR code parameter" });
-            return;
-        }
-        let course = null;
-        let lesson = null;
-        if (courseId && lessonId) {
-            course = await Course.findById(courseId);
-            if (course) {
-                lesson = findLessonInCourse(course, lessonId).lesson;
-            }
-        }
-        // Auto-discover course & lesson by QR code if missing
-        if (!course || !lesson) {
-            const courses = await Course.find();
-            for (const c of courses) {
-                for (const m of c.modules) {
-                    for (const l of m.lessons) {
-                        if (l.qrMarkers?.some((q) => q.code === code || q._id?.toString() === code)) {
-                            course = c;
-                            lesson = l;
-                            courseId = c._id.toString();
-                            lessonId = l._id?.toString() || "";
-                            break;
-                        }
-                    }
-                    if (lesson)
-                        break;
-                }
-                if (lesson)
-                    break;
-            }
-        }
-        if (!course || !lesson) {
-            res.status(404).json({ message: "Invalid or unknown QR code" });
-            return;
-        }
-        // Match QR marker
-        const qrMarker = lesson.qrMarkers?.find((q) => q.code === code || q._id?.toString() === code);
-        if (!qrMarker) {
-            res.status(400).json({ message: "Invalid or unknown QR code for this lesson" });
-            return;
-        }
-        let progress = await findOrCreateStudentProgress(userId, courseId, lessonId);
-        const isAlreadyScanned = progress.scannedQrCodes.includes(qrMarker.code);
-        let pointsAwarded = 0;
-        if (!isAlreadyScanned) {
-            progress.scannedQrCodes.push(qrMarker.code);
-            pointsAwarded = qrMarker.points || 15;
-            progress.totalPointsEarned += pointsAwarded;
-            await progress.save();
-            // Award points to User model
-            await User.findByIdAndUpdate(userId, { $inc: { points: pointsAwarded } });
-        }
-        const isLessonCompleted = await checkAndMarkLessonCompletion(userId, courseId, lessonId, lesson);
-        const updatedUser = await User.findById(userId).select("points");
-        res.json({
-            success: true,
-            message: isAlreadyScanned ? "QR Code already scanned" : `QR Code scanned! +${pointsAwarded} points`,
-            pointsAwarded,
-            totalPoints: updatedUser?.points || 0,
-            scannedQrCodes: progress.scannedQrCodes,
-            isLessonCompleted
-        });
-    }
-    catch (error) {
-        console.error("Error recording QR scan:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
-    }
 };
 // @desc Record Answer to an in-video question
 // @route POST /api/courses/:courseId/lessons/:lessonId/answer
@@ -332,30 +250,24 @@ export const getLessonProgress = async (req, res) => {
             return;
         }
         const progress = await StudentProgress.findOne({ student: userId, course: courseId, lessonId });
-        const totalQr = lesson.qrMarkers?.length || 0;
         const totalQuestions = lesson.questionMarkers?.length || 0;
-        const scannedCount = progress?.scannedQrCodes?.length || 0;
         const answeredCorrectCount = progress?.answeredQuestions?.filter(q => q.isCorrect).length || 0;
         const minWatchPercent = course?.completionRules?.minLessonWatchPercent || 75;
         const typeStr = (lesson.type || '').toLowerCase();
         const isNonVideoType = typeStr === 'reading' || typeStr === 'assignment' || typeStr === 'quiz' || typeStr === 'link';
         const isVideoLesson = typeStr === 'video' || (!isNonVideoType && Boolean(lesson.contentUrl || lesson.videoUrl));
         const watchPercent = progress?.watchPercent || 0;
-        // For video lessons: videoWatched is true when the watch threshold is met.
-        // For non-video lessons: we do not use the watch gate; they complete via activities or explicit marking.
         const videoWatched = isVideoLesson
             ? (Boolean(progress?.videoWatched) || watchPercent >= minWatchPercent)
-            : true; // non-video lessons don't have a watch gate
+            : true;
         const isReadingLesson = typeStr === 'reading';
         const isReadingSatisfied = !isReadingLesson || watchPercent >= 90;
-        const hasAnyRequirement = totalQr > 0 || totalQuestions > 0 || isVideoLesson || isReadingLesson;
-        const allActivitiesMet = (totalQr === 0 || scannedCount >= totalQr) &&
-            (totalQuestions === 0 || answeredCorrectCount >= totalQuestions) &&
+        const hasAnyRequirement = totalQuestions > 0 || isVideoLesson || isReadingLesson;
+        const allActivitiesMet = (totalQuestions === 0 || answeredCorrectCount >= totalQuestions) &&
             videoWatched &&
             isReadingSatisfied;
         const isCompleted = Boolean(progress?.completed) || (hasAnyRequirement && allActivitiesMet);
         res.json({
-            scannedQrCodes: progress?.scannedQrCodes || [],
             answeredQuestions: progress?.answeredQuestions || [],
             watchPercent,
             maxWatchedTime: progress?.maxWatchedTime || 0,
@@ -364,7 +276,6 @@ export const getLessonProgress = async (req, res) => {
             completed: isCompleted,
             completedAt: progress?.completedAt || null,
             totalPointsEarned: progress?.totalPointsEarned || 0,
-            totalQrRequired: totalQr,
             totalQuestionsRequired: totalQuestions,
             allRequirementsMet: isCompleted
         });
@@ -446,18 +357,15 @@ export const getInteractiveAnalytics = async (req, res) => {
         // Calculate total lessons & questions configured across courses
         let totalLessonsCount = 0;
         let totalQuestionsConfigured = 0;
-        let totalCheckInsConfigured = 0;
         courses.forEach((c) => {
             c.modules?.forEach((m) => {
                 m.lessons?.forEach((l) => {
                     totalLessonsCount++;
                     totalQuestionsConfigured += l.questionMarkers?.length || 0;
-                    totalCheckInsConfigured += l.qrMarkers?.length || 0;
                 });
             });
         });
         // Aggregations
-        let totalQrScans = 0;
         let totalQuestionsAttempted = 0;
         let totalQuestionsCorrect = 0;
         let totalResponseTimeSecs = 0;
@@ -479,7 +387,6 @@ export const getInteractiveAnalytics = async (req, res) => {
                         courseName: e.course?.title || "Course",
                         totalQuestionsAttempted: 0,
                         totalQuestionsCorrect: 0,
-                        totalCheckIns: 0,
                         totalPoints: 0,
                         totalTimeTaken: 0,
                         lessonsCompletedCount: 0,
@@ -491,7 +398,6 @@ export const getInteractiveAnalytics = async (req, res) => {
         });
         // Populate from StudentProgress
         allProgress.forEach((p) => {
-            totalQrScans += p.scannedQrCodes?.length || 0;
             totalQuestionsAttempted += p.answeredQuestions?.length || 0;
             totalQuestionsCorrect +=
                 p.answeredQuestions?.filter((q) => q.isCorrect).length || 0;
@@ -512,7 +418,6 @@ export const getInteractiveAnalytics = async (req, res) => {
                         courseName: p.course?.title || "Course",
                         totalQuestionsAttempted: 0,
                         totalQuestionsCorrect: 0,
-                        totalCheckIns: 0,
                         totalPoints: 0,
                         totalTimeTaken: 0,
                         lessonsCompletedCount: 0,
@@ -524,7 +429,6 @@ export const getInteractiveAnalytics = async (req, res) => {
                 sp.totalQuestionsAttempted += p.answeredQuestions?.length || 0;
                 sp.totalQuestionsCorrect +=
                     p.answeredQuestions?.filter((q) => q.isCorrect).length || 0;
-                sp.totalCheckIns += p.scannedQrCodes?.length || 0;
                 sp.totalPoints += p.totalPointsEarned || 0;
                 sp.watchPercentSum += p.watchPercent || 0;
                 sp.totalLessonsEngaged += 1;
@@ -553,15 +457,14 @@ export const getInteractiveAnalytics = async (req, res) => {
                 : sp.totalQuestionsAttempted > 0
                     ? 80
                     : 0;
-            const checkInScore = sp.totalCheckIns > 0 ? Math.min(100, sp.totalCheckIns * 25) : 0;
             // Engagement Score Formula (0-100) exact weighted formula:
-            // 40% Video Completion + 25% Question Participation + 20% Answer Accuracy + 10% Learning Behavior + 5% Gamification Activity
+            // 40% Video Completion + 25% Question Participation + 20% Answer Accuracy + 15% Learning Behavior & Points
             const videoCompletionComponent = completionRate * 0.40;
             const questionParticipationComponent = participationRate * 0.25;
             const answerAccuracyComponent = questionAccuracyRate * 0.20;
             const learningBehaviorScore = Math.min(100, (sp.totalLessonsEngaged > 0 ? 80 : 0) + (sp.totalTimeTaken > 0 ? 20 : 0));
             const learningBehaviorComponent = learningBehaviorScore * 0.10;
-            const gamificationScore = Math.min(100, (sp.totalPoints > 0 ? 50 : 0) + (sp.totalCheckIns > 0 ? 50 : 0));
+            const gamificationScore = Math.min(100, sp.totalPoints > 0 ? 100 : 0);
             const gamificationActivityComponent = gamificationScore * 0.05;
             const engagementScore = Math.min(100, Math.round(videoCompletionComponent +
                 questionParticipationComponent +
@@ -594,7 +497,6 @@ export const getInteractiveAnalytics = async (req, res) => {
                 questionAccuracyRate,
                 totalQuestionsAttempted: sp.totalQuestionsAttempted,
                 totalQuestionsCorrect: sp.totalQuestionsCorrect,
-                totalCheckIns: sp.totalCheckIns,
                 totalPoints: sp.totalPoints,
                 avgResponseTime,
                 isAtRisk,
@@ -753,7 +655,7 @@ export const getInteractiveAnalytics = async (req, res) => {
             ? Math.round(totalMaxWatchedTimeSum / allProgress.length)
             : 0;
         const avgWatchTimeMins = Math.round(avgWatchTimeSecs / 60);
-        const studentsWithXpOrScans = studentRankings.filter((s) => s.totalPoints > 0 || s.totalCheckIns > 0).length;
+        const studentsWithXpOrScans = studentRankings.filter((s) => s.totalPoints > 0).length;
         const gamificationActivityRate = totalEnrolled > 0
             ? Math.min(100, Math.round((studentsWithXpOrScans / totalEnrolled) * 100))
             : 0;
@@ -907,13 +809,12 @@ export const getInteractiveAnalytics = async (req, res) => {
         const gamificationAnalysis = {
             totalXpEarned: totalXpSum,
             badgeAchievements: Math.round(studentRankings.filter((s) => s.totalPoints >= 50).length * 2),
-            qrScanActivities: totalQrScans,
             leaderboardActivity: `${highXpStudents.length} Students Active`,
             highXpAvgEngagement: `${highXpAvgEng}%`,
             lowXpAvgEngagement: `${lowXpAvgEng}%`,
             gamificationInsight: highXpAvgEng > lowXpAvgEng
                 ? `Students who actively participate in gamification activities show ${highXpAvgEng - lowXpAvgEng}% higher engagement.`
-                : "Encourage students to participate in interactive check-ins to boost engagement.",
+                : "Encourage students to participate in interactive activities to boost engagement.",
         };
         // 6. Student Engagement Monitoring (Categorization) — 100% Real Database Calculations
         const highEngaged = studentRankings.filter((s) => s.engagementScore >= 80);
@@ -1024,7 +925,6 @@ export const getInteractiveAnalytics = async (req, res) => {
                 avgResponseTimeSecs,
                 avgLessonCompletionRate,
                 totalSkippedInteractions: Math.max(0, totalQuestionsConfigured * totalEnrolled - totalQuestionsAttempted),
-                totalCheckInsCompleted: totalQrScans,
                 avgLessonRating: 4.8,
                 atRiskStudentCount: atRiskStudents.length,
             },

@@ -1,11 +1,4 @@
 import mongoose, { Document } from 'mongoose';
-export interface IQrMarker {
-    _id?: mongoose.Types.ObjectId;
-    timestamp: number;
-    code: string;
-    label?: string;
-    points?: number;
-}
 export interface IMatchingPair {
     term: string;
     definition: string;
@@ -30,7 +23,6 @@ export interface ILesson {
     refId?: mongoose.Types.ObjectId;
     points?: number;
     description?: string;
-    qrMarkers?: IQrMarker[];
     questionMarkers?: IQuestionMarker[];
 }
 export interface IModule {

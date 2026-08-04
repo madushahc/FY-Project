@@ -3,7 +3,6 @@ const StudentProgressSchema = new Schema({
     student: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     course: { type: Schema.Types.ObjectId, ref: 'Course', required: true },
     lessonId: { type: String, required: true },
-    scannedQrCodes: [{ type: String }],
     answeredQuestions: [
         {
             questionMarkerId: { type: String, required: true },

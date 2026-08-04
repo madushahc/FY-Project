@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCourseStore } from '@/store/useCourseStore';
 import { useUserStore } from '@/store/useUserStore';
-import { ArrowLeft, Check, Play, FileText, PenTool, Link as LinkIcon, BookOpen, ExternalLink, Lock, QrCode, HelpCircle, Award } from 'lucide-react';
+import { ArrowLeft, Check, Play, FileText, PenTool, Link as LinkIcon, BookOpen, ExternalLink, Lock, HelpCircle, Award } from 'lucide-react';
 import Loading from '@/components/ui/Loading';
 import InteractiveVideoPlayer from '@/components/InteractiveVideoPlayer';
 import InteractiveReadingPlayer from '@/components/InteractiveReadingPlayer';
@@ -221,7 +221,6 @@ export default function CoursePlayerView() {
           videoUrl={fullUrl}
           courseId={activeCourse?._id || ''}
           lessonId={activeLesson._id || activeLesson.title}
-          qrMarkers={activeLesson.qrMarkers || []}
           questionMarkers={activeLesson.questionMarkers || []}
           onCompletionChange={handleLessonCompletionChange}
           onUnlockNextLesson={handleUnlockNextLesson}
@@ -237,7 +236,6 @@ export default function CoursePlayerView() {
           description={activeLesson.description}
           courseId={activeCourse?._id || ''}
           lessonId={activeLesson._id || activeLesson.title}
-          qrMarkers={activeLesson.qrMarkers || []}
           questionMarkers={activeLesson.questionMarkers || []}
           onCompletionChange={handleLessonCompletionChange}
           onPointsAwarded={handlePointsEarned}

@@ -934,8 +934,8 @@ export default function LecturerLearningAnalyticsPage() {
             </div>
 
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl text-center">
-              <span className="text-[10px] font-extrabold text-blue-700 uppercase block">Check-in Activities</span>
-              <span className="text-2xl font-black text-blue-900 mt-1 block">⚡ {gamificationAnalysis.qrScanActivities} Completed</span>
+              <span className="text-[10px] font-extrabold text-blue-700 uppercase block">Interactive Lessons</span>
+              <span className="text-2xl font-black text-blue-900 mt-1 block">⚡ {summary?.totalInteractiveLessons || 0} Configured</span>
             </div>
 
             <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-2xl text-center">

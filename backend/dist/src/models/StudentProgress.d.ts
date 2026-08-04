@@ -14,7 +14,6 @@ export interface IStudentProgress extends Document {
     student: mongoose.Types.ObjectId;
     course: mongoose.Types.ObjectId;
     lessonId: string;
-    scannedQrCodes: string[];
     answeredQuestions: IAnsweredQuestion[];
     watchPercent: number;
     maxWatchedTime: number;

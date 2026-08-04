@@ -60,9 +60,9 @@ export default function InteractiveAnalyticsView() {
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/20 text-blue-300 font-bold text-xs rounded-full border border-blue-400/30 mb-2">
             <ZapIcon /> Interactive Video Module Monitoring
           </div>
-          <h2 className="text-xl font-bold">Student Video Attention & Check-in Analytics</h2>
+          <h2 className="text-xl font-bold">Student Video Attention & Checkpoint Analytics</h2>
           <p className="text-xs text-slate-300 font-medium mt-1">
-            Real-time tracking of embedded QR code check-ins, checkpoint questions, and student participation.
+            Real-time tracking of embedded checkpoint questions and student participation.
           </p>
         </div>
         <button
@@ -74,18 +74,7 @@ export default function InteractiveAnalyticsView() {
       </div>
 
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-          <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Engagement Check-ins</span>
-            <div className="w-8 h-8 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center font-bold">
-              <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-slate-800">{summary?.totalQrScans || 0}</div>
-          <p className="text-xs text-slate-500 font-medium mt-1">Verified student ratings & feedback</p>
-        </div>
-
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
           <div className="flex justify-between items-start mb-2">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Verifications Answered</span>
@@ -139,7 +128,6 @@ export default function InteractiveAnalyticsView() {
               <tr>
                 <th className="p-4">Course & Lesson</th>
                 <th className="p-4">Format</th>
-                <th className="p-4 text-center">Engagement Prompts</th>
                 <th className="p-4 text-center">Configured Questions</th>
                 <th className="p-4 text-center">Students Engaged</th>
                 <th className="p-4 text-center">Correct Answers</th>
@@ -149,7 +137,7 @@ export default function InteractiveAnalyticsView() {
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {lessonAnalytics.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-400">
+                  <td colSpan={6} className="p-8 text-center text-slate-400">
                     No interactive video lessons configured yet.
                   </td>
                 </tr>
@@ -163,11 +151,6 @@ export default function InteractiveAnalyticsView() {
                     <td className="p-4 text-slate-600">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded font-bold text-[10px] ${item.lessonType === 'video' ? 'bg-purple-100 text-purple-800' : 'bg-emerald-100 text-emerald-800'}`}>
                         {item.lessonType === 'video' ? '🎥 Video' : '📖 Reading'}
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">
-                        {item.qrCount} QR
                       </span>
                     </td>
                     <td className="p-4 text-center">
@@ -190,8 +173,8 @@ export default function InteractiveAnalyticsView() {
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
           <div>
-            <h3 className="font-bold text-slate-800 text-base">Student Video Check-in Log</h3>
-            <p className="text-xs text-slate-400 font-medium">Individual student check-in & interactive task progress</p>
+            <h3 className="font-bold text-slate-800 text-base">Student Video Checkpoint Log</h3>
+            <p className="text-xs text-slate-400 font-medium">Individual student checkpoint & interactive task progress</p>
           </div>
         </div>
 
@@ -201,7 +184,6 @@ export default function InteractiveAnalyticsView() {
               <tr>
                 <th className="p-4">Student</th>
                 <th className="p-4 text-center">Lessons Attended</th>
-                <th className="p-4 text-center">QR Codes Scanned</th>
                 <th className="p-4 text-center">Questions Correct</th>
                 <th className="p-4 text-center">Interactive XP Earned</th>
               </tr>
@@ -209,7 +191,7 @@ export default function InteractiveAnalyticsView() {
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {studentSummary.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-slate-400">
+                  <td colSpan={4} className="p-8 text-center text-slate-400">
                     No student interaction records yet.
                   </td>
                 </tr>
@@ -221,7 +203,6 @@ export default function InteractiveAnalyticsView() {
                       <div className="text-[11px] text-slate-400">{s.email}</div>
                     </td>
                     <td className="p-4 text-center font-bold text-slate-700">{s.lessonsEngaged}</td>
-                    <td className="p-4 text-center font-bold text-amber-600">{s.totalQrScanned}</td>
                     <td className="p-4 text-center font-bold text-blue-600">{s.totalQuestionsAnswered}</td>
                     <td className="p-4 text-center font-bold text-emerald-600">+{s.totalInteractivePoints} PTS</td>
                   </tr>

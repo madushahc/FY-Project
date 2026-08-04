@@ -16,7 +16,6 @@ export interface IStudentProgress extends Document {
   student: mongoose.Types.ObjectId;
   course: mongoose.Types.ObjectId;
   lessonId: string;
-  scannedQrCodes: string[]; // List of scanned QR code strings / IDs
   answeredQuestions: IAnsweredQuestion[];
   watchPercent: number; // 0 to 100 percentage watched
   maxWatchedTime: number; // max timestamp in seconds reached
@@ -32,7 +31,6 @@ const StudentProgressSchema = new Schema<IStudentProgress>({
   student: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   course: { type: Schema.Types.ObjectId, ref: 'Course', required: true },
   lessonId: { type: String, required: true },
-  scannedQrCodes: [{ type: String }],
   answeredQuestions: [
     {
       questionMarkerId: { type: String, required: true },

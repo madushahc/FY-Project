@@ -24,14 +24,6 @@ const CourseSchema = new Schema({
                     refId: { type: Schema.Types.ObjectId },
                     points: { type: Number, default: 10 },
                     description: { type: String },
-                    qrMarkers: [
-                        {
-                            timestamp: { type: Number, required: true },
-                            code: { type: String, required: true },
-                            label: { type: String, default: 'Scan QR Code' },
-                            points: { type: Number, default: 15 }
-                        }
-                    ],
                     questionMarkers: [
                         {
                             timestamp: { type: Number, required: true },
