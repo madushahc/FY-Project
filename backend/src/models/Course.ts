@@ -1,5 +1,30 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export interface IQrMarker {
+  _id?: mongoose.Types.ObjectId;
+  timestamp: number; // In seconds
+  code: string; // Unique QR code string
+  label?: string;
+  points?: number;
+}
+
+export interface IMatchingPair {
+  term: string;
+  definition: string;
+}
+
+export interface IQuestionMarker {
+  _id?: mongoose.Types.ObjectId;
+  timestamp: number; // In seconds (or scroll percentage for reading materials)
+  questionText: string;
+  questionType?: 'mcq' | 'true-false' | 'matching';
+  options: string[];
+  correctOption: number; // For MCQ / True-False
+  matchingPairs?: IMatchingPair[]; // For matching task
+  explanation?: string;
+  points?: number;
+}
+
 export interface ILesson {
   _id?: mongoose.Types.ObjectId;
   title: string;
@@ -8,6 +33,9 @@ export interface ILesson {
   duration?: number; // In minutes
   refId?: mongoose.Types.ObjectId; // Reference to Quiz or Assignment if type matches
   points?: number; // Gamification points for completing this specific lesson
+  description?: string;
+  qrMarkers?: IQrMarker[];
+  questionMarkers?: IQuestionMarker[];
 }
 
 export interface IModule {
@@ -65,7 +93,33 @@ const CourseSchema = new Schema<ICourse>({
           contentUrl: { type: String },
           duration: { type: Number },
           refId: { type: Schema.Types.ObjectId },
-          points: { type: Number, default: 10 }
+          points: { type: Number, default: 10 },
+          description: { type: String },
+          qrMarkers: [
+            {
+              timestamp: { type: Number, required: true },
+              code: { type: String, required: true },
+              label: { type: String, default: 'Scan QR Code' },
+              points: { type: Number, default: 15 }
+            }
+          ],
+          questionMarkers: [
+            {
+              timestamp: { type: Number, required: true },
+              questionText: { type: String, required: true },
+              questionType: { type: String, enum: ['mcq', 'true-false', 'matching'], default: 'mcq' },
+              options: [{ type: String }],
+              correctOption: { type: Number, default: 0 },
+              matchingPairs: [
+                {
+                  term: { type: String, required: true },
+                  definition: { type: String, required: true }
+                }
+              ],
+              explanation: { type: String, default: '' },
+              points: { type: Number, default: 20 }
+            }
+          ]
         }
       ]
     }
@@ -74,7 +128,7 @@ const CourseSchema = new Schema<ICourse>({
   status: { type: String, enum: ['Published', 'Draft'], default: 'Draft' },
   enrollmentType: { type: String, enum: ['Open', 'Restricted'], default: 'Open' },
   completionRules: {
-    minLessonWatchPercent: { type: Number, default: 80 },
+    minLessonWatchPercent: { type: Number, default: 75 },
     minQuizPassScore: { type: Number, default: 60 },
     requireAllAssignments: { type: Boolean, default: true }
   }

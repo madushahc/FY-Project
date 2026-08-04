@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -40,7 +40,7 @@ export default function CoursesPage() {
     if (user) {
       fetchMyEnrollments();
     }
-  }, [fetchAvailableCourses, fetchMyEnrollments, user]);
+  }, [user]);
 
   // Calculate dynamic stats from availableCourses or fall back to mock numbers
   const getStats = () => {

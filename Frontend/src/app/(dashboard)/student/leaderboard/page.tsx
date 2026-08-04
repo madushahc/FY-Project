@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState } from 'react';
 import { useGamificationStore } from '@/store/useGamificationStore';
@@ -13,7 +13,7 @@ export default function Leaderboard() {
      if (storedUser) setCurrentUser(JSON.parse(storedUser));
      
      fetchLeaderboard();
-  }, [fetchLeaderboard]);
+  }, []);
 
   const mapRanks = () => {
      let mapped = leaderboard.map((u: any, idx: number) => {

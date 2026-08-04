@@ -17,10 +17,11 @@ export default function BrowseCourses() {
   useEffect(() => {
     fetchAvailableCourses();
     fetchMyEnrollments();
-  }, [fetchAvailableCourses, fetchMyEnrollments]);
+  }, []);
 
   // Extended mocked courses based on screenshot layout (9 of 18 courses)
-  const isEnrolled = (courseId: string) => myEnrollments.some(e => (e.course._id || e.course) === courseId);
+  const isEnrolled = (courseId: string) =>
+    myEnrollments.some((e) => e && e.course && ((e.course as any)._id || e.course) === courseId);
 
   const handleEnroll = async (courseId: string, currentlyEnrolled: boolean) => {
     if (currentlyEnrolled) {
@@ -212,6 +213,11 @@ export default function BrowseCourses() {
             ) : filteredCourses.map(course => {
               const enrolled = isEnrolled(course._id);
               const isSubmitting = enrollingId === course._id;
+              const allLessonsCount = course.modules?.reduce((sum: number, m: any) => sum + (m.lessons?.length || 0), 0) || 0;
+              const quizLessonsCount = course.modules?.reduce((sum: number, m: any) => sum + (m.lessons?.filter((l: any) => l.type === 'quiz').length || 0), 0) || 0;
+              const checkpointQuestionsCount = course.modules?.reduce((sum: number, m: any) => sum + (m.lessons?.reduce((qSum: number, l: any) => qSum + (l.questionMarkers?.length || 0), 0) || 0), 0) || 0;
+              const totalQuizzesCount = quizLessonsCount + checkpointQuestionsCount;
+
               return (
                 <div key={course._id} className="bg-white border border-slate-200 rounded-[20px] overflow-hidden shadow-sm hover:shadow-md transition group relative flex flex-col">
 
@@ -220,8 +226,20 @@ export default function BrowseCourses() {
                     {enrolled && <span className="px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[10px] font-bold tracking-wide">Enrolled</span>}
                   </div>
 
-                  <div className="h-40 bg-slate-50 border-b border-slate-100 flex items-center justify-center text-6xl group-hover:bg-blue-50/30 transition-colors">
-                    📚
+                  <div className="h-44 bg-slate-50 border-b border-slate-100 flex items-center justify-center text-6xl group-hover:bg-blue-50/30 transition-colors overflow-hidden">
+                    {course.thumbnailUrl ? (
+                      <img
+                        src={
+                          course.thumbnailUrl.startsWith("http")
+                            ? course.thumbnailUrl
+                            : `${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:5000"}${course.thumbnailUrl}`
+                        }
+                        alt={course.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      "📚"
+                    )}
                   </div>
 
                   <div className="p-5 flex flex-col flex-1">
@@ -231,8 +249,10 @@ export default function BrowseCourses() {
                     <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-2">
                       <span className="text-[10px]">👨‍🏫</span> {course.instructor?.name || 'Unknown Instructor'}
                     </div>
-                    <div className="flex items-center gap-4 text-xs font-medium text-slate-500 mb-4">
-                      <span className="flex items-center gap-1.5"><span className="text-[10px]">📖</span> {course.modules?.length || 0} modules</span>
+                    <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-slate-500 mb-4">
+                      <span className="flex items-center gap-1"><span className="text-[10px]">📖</span> {allLessonsCount} lessons</span>
+                      <span className="flex items-center gap-1"><span className="text-[10px]">📝</span> {totalQuizzesCount} quizzes</span>
+                      <span className="flex items-center gap-1"><span className="text-[10px]">🧩</span> {course.modules?.length || 0} modules</span>
                     </div>
 
                     <div className="flex items-center justify-between mb-5">

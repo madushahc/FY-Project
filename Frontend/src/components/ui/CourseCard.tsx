@@ -16,8 +16,16 @@ export interface CourseData {
   colorType?: "blue" | "emerald" | "purple" | "orange" | "yellow";
   tags?: string[];
   emoji?: string;
+  thumbnailUrl?: string;
   status: "enrolled" | "available" | "completed";
 }
+
+const getImageUrl = (url?: string) => {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  const backendUrl = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:5000";
+  return `${backendUrl}${url}`;
+};
 
 export function CourseCard({ course }: { course: CourseData }) {
   // Mapping color types to styles
@@ -47,14 +55,23 @@ export function CourseCard({ course }: { course: CourseData }) {
 
   const scheme =
     (course.colorType && (colorMap as any)[course.colorType]) || colorMap.blue;
+  const imageUrl = getImageUrl(course.thumbnailUrl);
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
       {/* Top Banner (Image Area) */}
       <div
-        className={`h-32 ${scheme.bg} relative flex items-center justify-center text-5xl`}
+        className={`h-40 ${scheme.bg} relative flex items-center justify-center text-5xl overflow-hidden`}
       >
-        {course.emoji || "📚"}
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={course.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          course.emoji || "📚"
+        )}
 
         {/* Top Left Tags */}
         <div className="absolute top-3 left-3 flex gap-2">

@@ -36,6 +36,7 @@ interface AssignmentState {
   createAssignment: (data: any) => Promise<void>;
   submitAssignment: (assignmentId: string, formData: FormData) => Promise<void>;
   gradeSubmission: (submissionId: string, score: number, feedback: string, bonusPoints?: number, badgeName?: string, rubricGrades?: any[]) => Promise<void>;
+  clearAssignmentsForCourse: (courseId: string) => void;
 }
 
 export const useAssignmentStore = create<AssignmentState>((set, get) => ({
@@ -44,6 +45,13 @@ export const useAssignmentStore = create<AssignmentState>((set, get) => ({
   submissions: [],
   loading: false,
   error: null,
+
+  clearAssignmentsForCourse: (courseId: string) =>
+    set((state) => ({
+      assignments: state.assignments.filter(
+        (a) => (a.course?._id || (a.course as any)) !== courseId
+      ),
+    })),
 
   fetchAssignmentsByCourse: async (courseId: string) => {
     set({ loading: true, error: null });

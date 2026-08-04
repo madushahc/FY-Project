@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState } from 'react';
 import { useGamificationStore } from '@/store/useGamificationStore';
@@ -12,7 +12,7 @@ export default function BadgeGallery() {
   useEffect(() => {
     initializeUser();
     fetchBadges();
-  }, [fetchBadges, initializeUser]);
+  }, []);
 
   if (loading) {
      return <Loading />;

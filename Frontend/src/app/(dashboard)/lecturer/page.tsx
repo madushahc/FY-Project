@@ -23,7 +23,7 @@ export default function LecturerDashboard() {
       setUser(JSON.parse(storedUser));
     }
     fetchMyCreatedCourses();
-  }, [fetchMyCreatedCourses]);
+  }, []);
 
   useEffect(() => {
     const getStats = async () => {
@@ -99,6 +99,9 @@ export default function LecturerDashboard() {
             <div className="bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
                👥 {totalStudents} Students
             </div>
+            <Link href="/lecturer/analytics" className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 transition">
+               📊 Engagement Analytics
+            </Link>
           </div>
         </div>
       </div>

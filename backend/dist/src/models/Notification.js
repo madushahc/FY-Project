@@ -3,7 +3,7 @@ const NotificationSchema = new Schema({
     recipient: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     title: { type: String, required: true },
     message: { type: String, required: true },
-    type: { type: String, enum: ['system', 'assignment', 'grade', 'badge', 'forum'], default: 'system' },
+    type: { type: String, enum: ['system', 'assignment', 'grade', 'badge', 'forum', 'enroll', 'course'], default: 'system' },
     linkUrl: { type: String },
     isRead: { type: Boolean, default: false },
     urgency: { type: String, enum: ['low', 'normal', 'high'], default: 'normal' }

@@ -1,4 +1,26 @@
 import mongoose, { Document } from 'mongoose';
+export interface IQrMarker {
+    _id?: mongoose.Types.ObjectId;
+    timestamp: number;
+    code: string;
+    label?: string;
+    points?: number;
+}
+export interface IMatchingPair {
+    term: string;
+    definition: string;
+}
+export interface IQuestionMarker {
+    _id?: mongoose.Types.ObjectId;
+    timestamp: number;
+    questionText: string;
+    questionType?: 'mcq' | 'true-false' | 'matching';
+    options: string[];
+    correctOption: number;
+    matchingPairs?: IMatchingPair[];
+    explanation?: string;
+    points?: number;
+}
 export interface ILesson {
     _id?: mongoose.Types.ObjectId;
     title: string;
@@ -7,6 +29,9 @@ export interface ILesson {
     duration?: number;
     refId?: mongoose.Types.ObjectId;
     points?: number;
+    description?: string;
+    qrMarkers?: IQrMarker[];
+    questionMarkers?: IQuestionMarker[];
 }
 export interface IModule {
     _id?: mongoose.Types.ObjectId;

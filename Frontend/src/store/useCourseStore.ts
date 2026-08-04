@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import api from "../lib/api";
 import { useUserStore } from "./useUserStore";
+import { useQuizStore } from "./useQuizStore";
+import { useAssignmentStore } from "./useAssignmentStore";
 
 interface Course {
   _id: string;
@@ -182,7 +184,31 @@ export const useCourseStore = create<CourseState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await api.delete(`/courses/${id}`);
-      await get().fetchMyCreatedCourses();
+      set((state) => ({
+        myCourses: state.myCourses.filter((c) => c._id !== id),
+        availableCourses: state.availableCourses.filter((c) => c._id !== id),
+        myEnrollments: state.myEnrollments.filter(
+          (e) => (e.course?._id || (e.course as any)) !== id
+        ),
+        activeCourse: state.activeCourse?._id === id ? null : state.activeCourse,
+        loading: false,
+      }));
+      // Clear quizzes and assignments from other Zustand stores
+      try {
+        useQuizStore.getState().clearQuizzesForCourse?.(id);
+        useAssignmentStore.getState().clearAssignmentsForCourse?.(id);
+      } catch {
+        // Ignore store cleanup error if any
+      }
+      try {
+        await Promise.all([
+          get().fetchMyCreatedCourses(),
+          get().fetchAvailableCourses(),
+          get().fetchMyEnrollments(),
+        ]);
+      } catch {
+        // Ignore background refetch error if unauthenticated for a specific role
+      }
     } catch (error: any) {
       set({
         error: error.response?.data?.message || error.message,
@@ -219,17 +245,40 @@ export const useCourseStore = create<CourseState>((set, get) => ({
 
   markLessonCompleted: async (courseId: string, lessonId: string) => {
     try {
-      const { myEnrollments } = get();
-      const enrollment = myEnrollments.find(
-        (e) =>
-          (e.course as any)._id === courseId || e.course === (courseId as any),
+      let { myEnrollments } = get();
+      let enrollment = myEnrollments.find(
+        (e) => e && e.course && (((e.course as any)._id || e.course) === courseId)
       );
+
+      if (!enrollment) {
+        const response = await api.get("/enrollments/my-enrollments");
+        set({ myEnrollments: response.data });
+        enrollment = response.data.find(
+          (e: any) => e && e.course && (((e.course as any)._id || e.course) === courseId)
+        );
+      }
+
       if (!enrollment) return;
 
-      await api.patch(`/enrollments/${enrollment._id}/progress`, {
+      const res = await api.patch(`/enrollments/${enrollment._id}/progress`, {
         completedLessonId: lessonId,
       });
-      await get().fetchMyEnrollments(); // Refetch to get updated progress/completedLessons
+
+      // Update local Zustand state immediately so next lesson unlocks without delay
+      set((state) => ({
+        myEnrollments: state.myEnrollments.map((e) => {
+          if (e._id === enrollment!._id) {
+            const currentLessons = (e as any).completedLessons || [];
+            const hasLesson = currentLessons.some((id: any) => String(id) === String(lessonId));
+            return {
+              ...e,
+              progress: res.data.progress !== undefined ? res.data.progress : e.progress,
+              completedLessons: hasLesson ? currentLessons : [...currentLessons, lessonId],
+            };
+          }
+          return e;
+        }),
+      }));
     } catch (error) {
       console.error("Failed to mark lesson completed", error);
     }

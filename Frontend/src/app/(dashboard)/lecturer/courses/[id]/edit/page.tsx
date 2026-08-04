@@ -17,9 +17,31 @@ import {
   Settings,
   X,
   Loader2,
+  ChevronDown,
+  QrCode,
+  Clock,
+  HelpCircle,
 } from "lucide-react";
 import Loading from "@/components/ui/Loading";
 import { useCourseStore } from "@/store/useCourseStore";
+
+const DEPARTMENTS = [
+  "Computing",
+  "Software Engineering",
+  "Computer Science",
+  "Data Science",
+  "Information Technology",
+  "Cyber Security",
+  "Business",
+  "Accounting & Finance",
+  "Marketing",
+  "Engineering",
+  "Civil Engineering",
+  "Electrical & Electronic Engineering",
+  "Mechanical Engineering",
+  "Science",
+  "Design & Multimedia",
+];
 
 export default function EditCourseWizard() {
   const router = useRouter();
@@ -47,7 +69,7 @@ export default function EditCourseWizard() {
     "Open",
   );
   const [status, setStatus] = useState<"Published" | "Draft">("Draft");
-  const [minLessonWatchPercent, setMinLessonWatchPercent] = useState(80);
+  const [minLessonWatchPercent, setMinLessonWatchPercent] = useState(75);
   const [minQuizPassScore, setMinQuizPassScore] = useState(60);
 
   // Gamification Defaults
@@ -62,6 +84,7 @@ export default function EditCourseWizard() {
   const [modalType, setModalType] = useState<
     "video" | "quiz" | "assignment" | "reading" | "link"
   >("video");
+  const [modalTab, setModalTab] = useState<"info" | "qr" | "questions">("info");
   const [lessonTitle, setLessonTitle] = useState("");
   const [lessonFile, setLessonFile] = useState<File | null>(null);
   const [lessonUrl, setLessonUrl] = useState("");
@@ -145,6 +168,58 @@ export default function EditCourseWizard() {
     ]);
   };
 
+  // Interactive markers state for video lessons
+  const [lessonQrMarkers, setLessonQrMarkers] = useState<any[]>([]);
+  const [lessonQuestionMarkers, setLessonQuestionMarkers] = useState<any[]>([]);
+
+  // Editing lesson state
+  const [editingLessonIdx, setEditingLessonIdx] = useState<number | null>(null);
+  const [lessonDescription, setLessonDescription] = useState<string>("");
+
+  // Temp form inputs for adding a single QR marker
+  const [newQrTime, setNewQrTime] = useState<number>(30);
+  const [newQrLabel, setNewQrLabel] = useState<string>("Check-in QR Code");
+  const [newQrPoints, setNewQrPoints] = useState<number>(15);
+  const [newQrTimer, setNewQrTimer] = useState<number>(30);
+
+  // Temp form inputs for adding a single question marker
+  const [newQTime, setNewQTime] = useState<number>(60);
+  const [newQText, setNewQText] = useState<string>("");
+  const [newQOptions, setNewQOptions] = useState<string[]>(["Option A", "Option B", "Option C", "Option D"]);
+  const [newQCorrect, setNewQCorrect] = useState<number>(0);
+  const [newQPoints, setNewQPoints] = useState<number>(20);
+  const [newQTimer, setNewQTimer] = useState<number>(30);
+
+  const handleAddQrMarker = () => {
+    const code = `QR-M${activeModuleIdx + 1}-L${modules[activeModuleIdx]?.lessons.length + 1}-${Math.floor(100 + Math.random() * 900)}`;
+    setLessonQrMarkers([
+      ...lessonQrMarkers,
+      {
+        timestamp: Number(newQrTime),
+        label: newQrLabel,
+        code,
+        points: Number(newQrPoints),
+        timerSeconds: Number(newQrTimer) || 30
+      }
+    ]);
+  };
+
+  const handleAddQuestionMarker = () => {
+    if (!newQText.trim()) return alert("Enter question text");
+    setLessonQuestionMarkers([
+      ...lessonQuestionMarkers,
+      {
+        timestamp: Number(newQTime),
+        questionText: newQText,
+        options: [...newQOptions],
+        correctOption: Number(newQCorrect),
+        points: Number(newQPoints),
+        timerSeconds: Number(newQTimer) || 30
+      }
+    ]);
+    setNewQText("");
+  };
+
   const handleAddLesson = async () => {
     if (!lessonTitle) return alert("Please enter a lesson title");
 
@@ -161,35 +236,76 @@ export default function EditCourseWizard() {
       setUploadingLesson(false);
     }
 
-    const newLesson = {
+    const isInteractive = ["video", "reading"].includes(modalType);
+
+    const lessonData = {
       title: lessonTitle,
       type: modalType,
       contentUrl: finalUrl,
+      description: lessonDescription,
       points:
         modalType === "quiz"
           ? pointDefaults.quiz
           : modalType === "assignment"
             ? pointDefaults.assignment
             : pointDefaults.lesson,
+      qrMarkers: isInteractive ? lessonQrMarkers : [],
+      questionMarkers: isInteractive ? lessonQuestionMarkers : []
     };
 
     const updatedModules = [...modules];
-    updatedModules[activeModuleIdx].lessons.push(newLesson);
+    if (editingLessonIdx !== null) {
+      updatedModules[activeModuleIdx].lessons[editingLessonIdx] = {
+        ...updatedModules[activeModuleIdx].lessons[editingLessonIdx],
+        ...lessonData
+      };
+    } else {
+      updatedModules[activeModuleIdx].lessons.push(lessonData);
+    }
     setModules(updatedModules);
 
     // Reset Modal
     setIsModalOpen(false);
+    setEditingLessonIdx(null);
     setLessonTitle("");
+    setLessonDescription("");
     setLessonFile(null);
     setLessonUrl("");
+    setLessonQrMarkers([]);
+    setLessonQuestionMarkers([]);
   };
 
   const openModal = (
     type: "video" | "quiz" | "assignment" | "reading" | "link",
   ) => {
     setModalType(type);
+    setModalTab("info");
+    setEditingLessonIdx(null);
+    setLessonTitle("");
+    setLessonDescription("");
+    setLessonUrl("");
+    setLessonFile(null);
+    setLessonQrMarkers([]);
+    setLessonQuestionMarkers([]);
     setIsModalOpen(true);
   };
+
+  const openEditLessonModal = (modIdx: number, lesIdx: number) => {
+    setActiveModuleIdx(modIdx);
+    const lesson = modules[modIdx]?.lessons[lesIdx];
+    if (!lesson) return;
+    setModalType(lesson.type || "video");
+    setModalTab("info");
+    setEditingLessonIdx(lesIdx);
+    setLessonTitle(lesson.title || "");
+    setLessonDescription(lesson.description || "");
+    setLessonUrl(lesson.contentUrl || "");
+    setLessonFile(null);
+    setLessonQrMarkers(lesson.qrMarkers || []);
+    setLessonQuestionMarkers(lesson.questionMarkers || []);
+    setIsModalOpen(true);
+  };
+
 
   const handleUpdate = async (isPublish: boolean = false) => {
     if (!canEditCourse) {
@@ -247,14 +363,13 @@ export default function EditCourseWizard() {
           <div className="absolute top-1/2 left-0 w-full h-[2px] bg-slate-100 -z-10 -translate-y-1/2"></div>
           <div
             className="absolute top-1/2 left-0 h-[2px] bg-emerald-500 -z-10 -translate-y-1/2 transition-all duration-300"
-            style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
+            style={{ width: `${((currentStep - 1) / 2) * 100}%` }}
           ></div>
 
           {[
             { num: 1, label: "Basic Info" },
             { num: 2, label: "Content" },
             { num: 3, label: "Settings" },
-            { num: 4, label: "Gamification" },
           ].map((step) => {
             const isCompleted = currentStep > step.num;
             const isActive = currentStep === step.num;
@@ -329,13 +444,26 @@ export default function EditCourseWizard() {
           <label className="block text-sm font-bold text-slate-700 mb-2">
             Department
           </label>
-          <input
-            type="text"
-            value={department}
-            onChange={(e) => setDepartment(e.target.value)}
-            placeholder="Faculty of Computing"
-            className="w-full p-3 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-slate-800"
-          />
+          <div className="relative">
+            <select
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              className="w-full p-3 pr-10 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-slate-800 bg-white appearance-none cursor-pointer font-medium shadow-sm transition-colors"
+            >
+              <option value="" disabled>Select Department</option>
+              {DEPARTMENTS.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
+              ))}
+              {department && !DEPARTMENTS.includes(department) && (
+                <option value={department}>{department}</option>
+              )}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+              <ChevronDown className="w-5 h-5" />
+            </div>
+          </div>
         </div>
       </div>
       <div>
@@ -443,14 +571,28 @@ export default function EditCourseWizard() {
                           {lesson.title}
                         </span>
                       </div>
-                      <Trash2
-                        className="w-3 h-3 text-red-400 cursor-pointer hover:text-red-600"
-                        onClick={() => {
-                          const updated = [...modules];
-                          updated[idx].lessons.splice(lIdx, 1);
-                          setModules(updated);
-                        }}
-                      />
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditLessonModal(idx, lIdx);
+                          }}
+                          className="p-1 hover:bg-slate-100 rounded text-blue-600 hover:text-blue-800 transition"
+                          title="Edit Lesson & Interactive Markers"
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                        </button>
+                        <Trash2
+                          className="w-3 h-3 text-red-400 cursor-pointer hover:text-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const updated = [...modules];
+                            updated[idx].lessons.splice(lIdx, 1);
+                            setModules(updated);
+                          }}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -498,7 +640,7 @@ export default function EditCourseWizard() {
 
             <div
               className="bg-yellow-50/50 border border-yellow-100 rounded-xl p-4 flex flex-col justify-between hover:shadow-md transition group cursor-pointer"
-              onClick={() => openModal("quiz")}
+              onClick={() => router.push("/lecturer/quizzes/new")}
             >
               <div className="flex items-start justify-between">
                 <div className="flex gap-3">
@@ -508,7 +650,7 @@ export default function EditCourseWizard() {
                       Quiz
                     </h4>
                     <p className="text-[11px] text-slate-500">
-                      Link to existing quiz
+                      Go to Quiz Creator page
                     </p>
                   </div>
                 </div>
@@ -517,7 +659,7 @@ export default function EditCourseWizard() {
 
             <div
               className="bg-red-50/50 border border-red-100 rounded-xl p-4 flex flex-col justify-between hover:shadow-md transition group cursor-pointer"
-              onClick={() => openModal("assignment")}
+              onClick={() => router.push("/lecturer/assignments/new")}
             >
               <div className="flex items-start justify-between">
                 <div className="flex gap-3">
@@ -527,7 +669,7 @@ export default function EditCourseWizard() {
                       Assignment
                     </h4>
                     <p className="text-[11px] text-slate-500">
-                      File submission
+                      Go to Assignment Creator page
                     </p>
                   </div>
                 </div>
@@ -670,113 +812,6 @@ export default function EditCourseWizard() {
             </div>
           </div>
         </div>
-
-        <div className="p-6 pb-6 border-b border-slate-100">
-          <h4 className="text-sm font-bold text-slate-700 mb-4">
-            Completion Requirements
-          </h4>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50/50">
-              <span className="text-sm text-slate-700 font-medium">
-                Minimum lesson watch %
-              </span>
-              <div className="bg-white border border-slate-200 rounded-md px-3 py-1 flex items-center gap-2">
-                <input
-                  type="number"
-                  value={minLessonWatchPercent}
-                  onChange={(e) =>
-                    setMinLessonWatchPercent(Number(e.target.value))
-                  }
-                  className="w-12 outline-none font-bold text-sm text-slate-800 bg-transparent text-right"
-                />
-                <span className="text-slate-400 text-xs">%</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between border border-slate-200 rounded-lg p-3 bg-slate-50/50">
-              <span className="text-sm text-slate-700 font-medium">
-                Minimum quiz pass score
-              </span>
-              <div className="bg-white border border-slate-200 rounded-md px-3 py-1 flex items-center gap-2">
-                <input
-                  type="number"
-                  value={minQuizPassScore}
-                  onChange={(e) => setMinQuizPassScore(Number(e.target.value))}
-                  className="w-12 outline-none font-bold text-sm text-slate-800 bg-transparent text-right"
-                />
-                <span className="text-slate-400 text-xs">%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderStep4 = () => (
-    <div className="flex flex-col lg:flex-row gap-6 items-start animate-in fade-in slide-in-from-bottom-2">
-      {/* Points System Column */}
-      <div className="flex-1 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="p-5 border-b border-slate-100">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2">
-            ⭐ Points System
-          </h3>
-          <div className="p-5 space-y-4">
-            {[
-              {
-                key: "lesson",
-                icon: "📖",
-                title: "Complete Lesson",
-                subtitle: "Finish a video lesson",
-              },
-              {
-                key: "quiz",
-                icon: "📝",
-                title: "Pass Quiz",
-                subtitle: "Score at or above pass threshold",
-              },
-              {
-                key: "assignment",
-                icon: "📎",
-                title: "Submit Assignment",
-                subtitle: "On-time submission",
-              },
-            ].map((item, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between border border-slate-200 rounded-xl p-4 hover:border-slate-300 transition-colors bg-white"
-              >
-                <div className="flex gap-4 items-center">
-                  <span className="text-xl">{item.icon}</span>
-                  <div>
-                    <h4 className="text-sm font-bold text-slate-800">
-                      {item.title}
-                    </h4>
-                    <p className="text-[11px] font-medium text-slate-400 mt-0.5">
-                      {item.subtitle}
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <input
-                    type="number"
-                    value={(pointDefaults as any)[item.key]}
-                    onChange={(e) =>
-                      setPointDefaults({
-                        ...pointDefaults,
-                        [item.key]: Number(e.target.value),
-                      })
-                    }
-                    className="w-20 text-center font-bold text-blue-600 px-3 py-2 bg-white border border-blue-400 rounded-lg outline-none"
-                  />
-                </div>
-              </div>
-            ))}
-            <p className="text-xs text-slate-400 font-medium pt-4">
-              These default points will be applied when you add new lessons in
-              the Content tab.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -792,7 +827,6 @@ export default function EditCourseWizard() {
       {currentStep === 1 && renderStep1()}
       {currentStep === 2 && renderStep2()}
       {currentStep === 3 && renderStep3()}
-      {currentStep === 4 && renderStep4()}
 
       <div className="flex justify-between pt-6 mt-6 border-t border-slate-200">
         {currentStep > 1 ? (
@@ -813,7 +847,7 @@ export default function EditCourseWizard() {
           >
             Cancel
           </button>
-          {currentStep < 4 ? (
+          {currentStep < 3 ? (
             <button
               onClick={() => setCurrentStep((prev) => prev + 1)}
               className="px-10 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition shadow-sm flex items-center text-sm"
@@ -841,64 +875,447 @@ export default function EditCourseWizard() {
         </div>
       </div>
 
+
       {/* Inline Modal for Adding Content */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-slate-800 capitalize">
-                Add {modalType}
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[92vh] overflow-y-auto flex flex-col">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 sticky top-0 z-10">
+              <h3 className="font-bold text-slate-800 capitalize flex items-center gap-2">
+                {editingLessonIdx !== null ? "✏️ Edit" : "➕ Add"} {modalType} Lesson
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-200 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6 space-y-5">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Title
-                </label>
-                <input
-                  type="text"
-                  value={lessonTitle}
-                  onChange={(e) => setLessonTitle(e.target.value)}
-                  className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                  placeholder="E.g. Introduction"
-                />
-              </div>
 
-              {["video", "reading"].includes(modalType) && (
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">
-                    Upload File
-                  </label>
-                  <input
-                    type="file"
-                    onChange={(e) => setLessonFile(e.target.files?.[0] || null)}
-                    className="w-full p-2 border border-slate-200 rounded-xl text-sm text-slate-600"
-                  />
+            {/* Tab Navigation — only show interactive tabs for video/reading */}
+            {(modalType === "video" || modalType === "reading") && (
+              <div className="flex gap-0 border-b border-slate-200 bg-white sticky top-[64px] z-10">
+                {([
+                  { id: "info", label: "📋 Lesson Info", count: null },
+                  { id: "qr", label: "⭐ Engagement Check-ins", count: lessonQrMarkers.length },
+                  { id: "questions", label: "❓ Questions", count: lessonQuestionMarkers.length },
+                ] as { id: "info" | "qr" | "questions"; label: string; count: number | null }[]).map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setModalTab(tab.id)}
+                    className={`flex-1 px-4 py-3 text-xs font-bold transition flex items-center justify-center gap-1.5 border-b-2 ${
+                      modalTab === tab.id
+                        ? "border-blue-600 text-blue-700 bg-blue-50/50"
+                        : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    {tab.label}
+                    {tab.count !== null && tab.count > 0 && (
+                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                        modalTab === tab.id ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-600"
+                      }`}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="p-6 space-y-5 flex-1">
+
+              {/* ── TAB 1: LESSON INFO ── */}
+              {(modalTab === "info" || modalType === "quiz" || modalType === "assignment" || modalType === "link") && (
+                <>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                      Lesson Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={lessonTitle}
+                      onChange={(e) => setLessonTitle(e.target.value)}
+                      className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                      placeholder="E.g. Introduction & Key Concepts"
+                    />
+                  </div>
+
+                  {["video", "reading"].includes(modalType) && (
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">
+                        {modalType === "video" ? "Upload Video" : "Upload Reading Material (PDF)"}
+                      </label>
+                      <input
+                        type="file"
+                        accept={modalType === "video" ? "video/*" : "application/pdf,.pdf"}
+                        onChange={(e) => setLessonFile(e.target.files?.[0] || null)}
+                        className="w-full p-2 border border-slate-200 rounded-xl text-sm text-slate-600"
+                      />
+                      <div className="mt-2 text-xs text-slate-400">Or provide direct URL:</div>
+                      <input
+                        type="text"
+                        value={lessonUrl}
+                        onChange={(e) => setLessonUrl(e.target.value)}
+                        placeholder={modalType === "video" ? "https://example.com/video.mp4" : "https://example.com/doc.pdf"}
+                        className="w-full mt-1 p-2.5 border border-slate-200 rounded-xl text-xs text-slate-700 font-medium"
+                      />
+                    </div>
+                  )}
+
+                  {modalType === "link" && (
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">
+                        URL
+                      </label>
+                      <input
+                        type="text"
+                        value={lessonUrl}
+                        onChange={(e) => setLessonUrl(e.target.value)}
+                        className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                        placeholder="https://"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                      Lesson Description / Text Material
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={lessonDescription}
+                      onChange={(e) => setLessonDescription(e.target.value)}
+                      className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                      placeholder="Enter reading text content or lesson notes..."
+                    />
+                  </div>
+
+                  {/* Summary of interactive markers on info tab */}
+                  {(modalType === "video" || modalType === "reading") && (lessonQrMarkers.length > 0 || lessonQuestionMarkers.length > 0) && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setModalTab("qr")}
+                        className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs font-bold text-amber-800 hover:bg-amber-100 transition"
+                      >
+                        <span className="text-amber-600 text-sm">⭐</span>
+                        {lessonQrMarkers.length} Engagement Check-in{lessonQrMarkers.length !== 1 ? "s" : ""} configured
+                        <span className="ml-auto text-amber-600">→</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setModalTab("questions")}
+                        className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs font-bold text-blue-800 hover:bg-blue-100 transition"
+                      >
+                        <HelpCircle className="w-4 h-4" />
+                        {lessonQuestionMarkers.length} Question{lessonQuestionMarkers.length !== 1 ? "s" : ""} configured
+                        <span className="ml-auto text-blue-600">→</span>
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ── TAB 2: ENGAGEMENT CHECK-INS ── */}
+              {modalTab === "qr" && (modalType === "video" || modalType === "reading") && (
+                <div className="space-y-4">
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <h4 className="text-sm font-bold text-amber-900 flex items-center gap-2 mb-1">
+                      <span className="text-amber-600">⭐</span> Engagement & Rating Check-in Markers
+                    </h4>
+                    <p className="text-xs text-amber-700 font-medium">
+                      {modalType === "video"
+                        ? "Interactive feedback prompts pop up at specific video timestamps. Students rate or give quick feedback to earn points!"
+                        : "Rating prompts appear when students reach specific scroll positions while reading."}
+                    </p>
+                  </div>
+
+                  {/* Existing Engagement Markers */}
+                  {lessonQrMarkers.length > 0 ? (
+                    <div className="space-y-2">
+                      <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Configured Check-ins ({lessonQrMarkers.length})</h5>
+                      {lessonQrMarkers.map((qr, idx) => (
+                        <div key={idx} className="bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-between shadow-sm">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center shrink-0 text-amber-600 font-bold">
+                              ⭐
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-slate-800">{qr.label || "Interactive Check-in"}</div>
+                              <div className="flex items-center gap-3 mt-0.5">
+                                <span className="text-[10px] text-slate-500 font-medium">
+                                  {modalType === "video" ? "⏰" : "📍"} {qr.timestamp}{modalType === "video" ? "s" : "% scroll"}
+                                </span>
+                                <span className="text-[10px] font-bold text-amber-600">+{qr.points} pts</span>
+                                <span className="text-[10px] text-slate-400 flex items-center gap-0.5">
+                                  <Clock className="w-2.5 h-2.5" /> {qr.timerSeconds || 30}s timer
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setLessonQrMarkers(lessonQrMarkers.filter((_, i) => i !== idx))}
+                            className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition"
+                            title="Remove Check-in Marker"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-slate-400 text-xs font-medium border border-dashed border-slate-200 rounded-xl">
+                      No engagement check-in markers added yet. Add one below.
+                    </div>
+                  )}
+
+                  {/* Add New Engagement Marker Form */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                    <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Add New Engagement Check-in</h5>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">
+                          {modalType === "video" ? "Timestamp (seconds)" : "Scroll Position (%)"}
+                        </label>
+                        <input
+                          type="number"
+                          placeholder={modalType === "video" ? "e.g. 30" : "e.g. 50"}
+                          value={newQrTime}
+                          onChange={(e) => setNewQrTime(Number(e.target.value))}
+                          min={0}
+                          max={modalType === "reading" ? 100 : undefined}
+                          className="w-full p-2.5 border border-slate-200 rounded-lg text-sm font-bold bg-white focus:ring-2 focus:ring-amber-300 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Points Awarded</label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 15"
+                          value={newQrPoints}
+                          onChange={(e) => setNewQrPoints(Number(e.target.value))}
+                          min={1}
+                          className="w-full p-2.5 border border-slate-200 rounded-lg text-sm font-bold bg-white focus:ring-2 focus:ring-amber-300 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">
+                        💬 Lecturer Question / Custom Prompt *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder='e.g. "What did you think of this key concept?" or "Are you clear on this topic so far?"'
+                        value={newQrLabel}
+                        onChange={(e) => setNewQrLabel(e.target.value)}
+                        className="w-full p-2.5 border border-slate-200 rounded-lg text-sm font-bold bg-white focus:ring-2 focus:ring-amber-300 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Display Timer (seconds) — how long prompt stays visible
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          placeholder="30"
+                          value={newQrTimer}
+                          onChange={(e) => setNewQrTimer(Number(e.target.value))}
+                          min={10}
+                          max={300}
+                          className="w-32 p-2.5 border border-slate-200 rounded-lg text-sm font-bold bg-white focus:ring-2 focus:ring-amber-300 focus:outline-none"
+                        />
+                        <span className="text-xs text-slate-400 font-medium">seconds (auto-dismisses if un-answered)</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddQrMarker}
+                      className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm rounded-xl transition shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span>⚡</span>
+                      Add Engagement Check-in at {newQrTime}{modalType === "video" ? "s" : "%"}
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {modalType === "link" && (
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">
-                    URL
-                  </label>
-                  <input
-                    type="text"
-                    value={lessonUrl}
-                    onChange={(e) => setLessonUrl(e.target.value)}
-                    className="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                    placeholder="https://"
-                  />
+              {/* ── TAB 3: QUESTIONS ── */}
+              {modalTab === "questions" && (modalType === "video" || modalType === "reading") && (
+                <div className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <h4 className="text-sm font-bold text-blue-900 flex items-center gap-2 mb-1">
+                      <HelpCircle className="w-4 h-4" /> Checkpoint Questions
+                    </h4>
+                    <p className="text-xs text-blue-700 font-medium">
+                      {modalType === "video"
+                        ? "MCQ questions that pause the video at a specific timestamp, requiring students to answer before continuing."
+                        : "MCQ questions triggered when students reach a scroll position in the reading material."}
+                    </p>
+                  </div>
+
+                  {/* Existing Questions */}
+                  {lessonQuestionMarkers.length > 0 ? (
+                    <div className="space-y-2">
+                      <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Configured Questions ({lessonQuestionMarkers.length})</h5>
+                      {lessonQuestionMarkers.map((q, idx) => (
+                        <div key={idx} className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-3">
+                              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                                <HelpCircle className="w-4 h-4 text-blue-600" />
+                              </div>
+                              <div>
+                                <div className="text-xs font-bold text-slate-800 mb-1">{q.questionText}</div>
+                                <div className="flex flex-wrap items-center gap-2 mb-2">
+                                  <span className="text-[10px] text-slate-500 font-medium">
+                                    {modalType === "video" ? "⏰" : "📍"} {q.timestamp}{modalType === "video" ? "s" : "% scroll"}
+                                  </span>
+                                  <span className="text-[10px] font-bold text-blue-600">+{q.points} pts</span>
+                                  <span className="text-[10px] text-slate-400 flex items-center gap-0.5">
+                                    <Clock className="w-2.5 h-2.5" /> {q.timerSeconds || 30}s timer
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-1">
+                                  {q.options?.map((opt: string, oIdx: number) => (
+                                    <div
+                                      key={oIdx}
+                                      className={`text-[10px] px-2 py-1 rounded-lg font-medium ${
+                                        oIdx === q.correctOption
+                                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold"
+                                          : "bg-slate-50 text-slate-600 border border-slate-200"
+                                      }`}
+                                    >
+                                      {String.fromCharCode(65 + oIdx)}. {opt}{oIdx === q.correctOption ? " ✓" : ""}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setLessonQuestionMarkers(lessonQuestionMarkers.filter((_, i) => i !== idx))}
+                              className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-lg transition shrink-0"
+                              title="Remove Question"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-slate-400 text-xs font-medium border border-dashed border-slate-200 rounded-xl">
+                      No questions added yet. Add one below.
+                    </div>
+                  )}
+
+                  {/* Add New Question Form */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                    <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Add New Question</h5>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">
+                          {modalType === "video" ? "Timestamp (seconds)" : "Scroll Position (%)"}
+                        </label>
+                        <input
+                          type="number"
+                          placeholder={modalType === "video" ? "e.g. 60" : "e.g. 75"}
+                          value={newQTime}
+                          onChange={(e) => setNewQTime(Number(e.target.value))}
+                          min={0}
+                          className="w-full p-2.5 border border-slate-200 rounded-lg text-sm font-bold bg-white focus:ring-2 focus:ring-blue-300 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Points</label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 20"
+                          value={newQPoints}
+                          onChange={(e) => setNewQPoints(Number(e.target.value))}
+                          min={1}
+                          className="w-full p-2.5 border border-slate-200 rounded-lg text-sm font-bold bg-white focus:ring-2 focus:ring-blue-300 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Question Text</label>
+                      <input
+                        type="text"
+                        placeholder="Enter your question here..."
+                        value={newQText}
+                        onChange={(e) => setNewQText(e.target.value)}
+                        className="w-full p-2.5 border border-slate-200 rounded-lg text-sm font-bold bg-white focus:ring-2 focus:ring-blue-300 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block">Answer Options (click border to set correct)</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {newQOptions.map((opt, oIdx) => (
+                          <div key={oIdx} className="relative">
+                            <input
+                              type="text"
+                              value={opt}
+                              onChange={(e) => {
+                                const opts = [...newQOptions];
+                                opts[oIdx] = e.target.value;
+                                setNewQOptions(opts);
+                              }}
+                              className={`w-full p-2.5 border-2 rounded-lg text-xs font-medium bg-white focus:outline-none pr-8 ${
+                                newQCorrect === oIdx
+                                  ? "border-emerald-500 bg-emerald-50"
+                                  : "border-slate-200 hover:border-slate-300"
+                              }`}
+                              placeholder={`Option ${String.fromCharCode(65 + oIdx)}`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setNewQCorrect(oIdx)}
+                              className={`absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 transition ${
+                                newQCorrect === oIdx
+                                  ? "border-emerald-500 bg-emerald-500"
+                                  : "border-slate-300 bg-white hover:border-emerald-400"
+                              }`}
+                              title={`Set Option ${String.fromCharCode(65 + oIdx)} as correct`}
+                            >
+                              {newQCorrect === oIdx && <span className="text-white text-[8px] font-bold flex items-center justify-center h-full">✓</span>}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1 font-medium">Click the circle ○ on the right to mark the correct answer (shown in green).</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 block flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Question Timer (seconds) — students must answer within this time
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          placeholder="30"
+                          value={newQTimer}
+                          onChange={(e) => setNewQTimer(Number(e.target.value))}
+                          min={10}
+                          max={300}
+                          className="w-32 p-2.5 border border-slate-200 rounded-lg text-sm font-bold bg-white focus:ring-2 focus:ring-blue-300 focus:outline-none"
+                        />
+                        <span className="text-xs text-slate-400 font-medium">seconds (e.g. 30 = 30s to answer)</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddQuestionMarker}
+                      className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg transition shadow-sm flex items-center justify-center gap-2"
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                      Add Question at {newQTime}{modalType === "video" ? "s" : "%"}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 sticky bottom-0">
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="px-5 py-2 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-lg transition"
@@ -919,3 +1336,4 @@ export default function EditCourseWizard() {
     </div>
   );
 }
+

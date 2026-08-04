@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 export default function AdminAllCourses() {
-  const { availableCourses, fetchAvailableCourses, loading, uploadFile } = useCourseStore();
+  const { availableCourses, fetchAvailableCourses, loading, uploadFile, deleteCourse } = useCourseStore();
   const [lecturers, setLecturers] = useState<any[]>([]);
   const [isWizardView, setIsWizardView] = useState(false);
   const [editingCourse, setEditingCourse] = useState<any | null>(null);
@@ -39,7 +39,7 @@ export default function AdminAllCourses() {
   // Settings State
   const [enrollmentType, setEnrollmentType] = useState<'Open' | 'Restricted'>('Open');
   const [status, setStatus] = useState<'Published' | 'Draft'>('Draft');
-  const [minLessonWatchPercent, setMinLessonWatchPercent] = useState(80);
+  const [minLessonWatchPercent, setMinLessonWatchPercent] = useState(75);
   const [minQuizPassScore, setMinQuizPassScore] = useState(60);
 
   // Gamification point defaults
@@ -71,7 +71,7 @@ export default function AdminAllCourses() {
       }
     };
     fetchLecturers();
-  }, [fetchAvailableCourses]);
+  }, []);
 
   const handleOpenAdd = () => {
     setEditingCourse(null);
@@ -125,10 +125,9 @@ export default function AdminAllCourses() {
   };
 
   const handleDeleteCourse = async (courseId: string) => {
-    if (window.confirm('Are you sure you want to delete this course?')) {
+    if (window.confirm('Are you sure you want to delete this course? This will remove the course and all related student enrollments, quizzes, and assignments.')) {
       try {
-        await api.delete(`/courses/${courseId}`);
-        await fetchAvailableCourses();
+        await deleteCourse(courseId);
       } catch (err: any) {
         alert(err.response?.data?.message || 'Failed to delete course');
       }
@@ -821,11 +820,28 @@ export default function AdminAllCourses() {
                          const progress = 0; // Backend lacks progress per course for now
                          const studentsCount = course.enrollmentCount || 0;
                          return (
-                         <tr key={course._id} className="hover:bg-slate-50 transition-colors">
-                            <td className="py-4 pl-6 pr-4">
-                               <p className="text-sm font-bold text-slate-800">{course.title}</p>
-                               <p className="text-[10px] text-slate-400 font-medium">{course.category || 'General'}</p>
-                            </td>
+                          <tr key={course._id} className="hover:bg-slate-50 transition-colors">
+                             <td className="py-4 pl-6 pr-4 flex items-center gap-3">
+                                {course.thumbnailUrl ? (
+                                  <img
+                                    src={
+                                      course.thumbnailUrl.startsWith("http")
+                                        ? course.thumbnailUrl
+                                        : `${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:5000"}${course.thumbnailUrl}`
+                                    }
+                                    alt={course.title}
+                                    className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-xl shrink-0">
+                                    📚
+                                  </div>
+                                )}
+                                <div>
+                                   <p className="text-sm font-bold text-slate-800">{course.title}</p>
+                                   <p className="text-[10px] text-slate-400 font-medium">{course.category || 'General'}</p>
+                                </div>
+                             </td>
                             <td className="py-4 px-4 text-sm text-slate-500 font-medium">
                                {course.code || 'N/A'}
                             </td>

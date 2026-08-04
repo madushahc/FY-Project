@@ -13,23 +13,37 @@ export default function MyCourses() {
 
   React.useEffect(() => {
     fetchMyEnrollments();
-  }, [fetchMyEnrollments]);
+  }, []);
 
   const colors: ('blue' | 'emerald' | 'purple' | 'orange' | 'yellow')[] = ['blue', 'emerald', 'purple', 'orange', 'yellow'];
 
-  const mappedCourses: CourseData[] = myEnrollments.map((e, index) => ({
-    id: e.course._id || (e.course as any),
-    title: e.course.title || 'Unknown Course',
-    code: e.course.code || ('CS' + (300 + index)),
-    department: e.course.department || 'Computing',
-    lecturer: e.course.instructor?.name || 'Instructor',
-    lessons: e.course.modules?.reduce((acc: number, m: any) => acc + (m.lessons?.length || 0), 0) || 0,
-    quizzes: 0,
-    progress: e.progress || 0,
-    emoji: '📚',
-    colorType: colors[index % colors.length],
-    status: e.progress === 100 ? 'completed' : 'enrolled',
-  }));
+  const validEnrollments = myEnrollments.filter(
+    (e) => e && e.course && (e.course._id || (e.course as any))
+  );
+
+  const mappedCourses: CourseData[] = validEnrollments.map((e, index) => {
+    const c = e.course;
+    const allLessons = c.modules?.reduce((sum: number, m: any) => sum + (m.lessons?.length || 0), 0) || 0;
+    const quizLessons = c.modules?.reduce((sum: number, m: any) => sum + (m.lessons?.filter((l: any) => l.type === 'quiz').length || 0), 0) || 0;
+    const checkpointQuestions = c.modules?.reduce((sum: number, m: any) => sum + (m.lessons?.reduce((qSum: number, l: any) => qSum + (l.questionMarkers?.length || 0), 0) || 0), 0) || 0;
+    const totalQuizzes = quizLessons + checkpointQuestions;
+
+    return {
+      id: c._id || (c as any),
+      title: c.title || 'Unknown Course',
+      code: c.code || ('CS' + (300 + index)),
+      department: c.department || 'Computing',
+      lecturer: c.instructor?.name || 'Instructor',
+      lessons: allLessons,
+      quizzes: totalQuizzes,
+      students: c.enrollmentCount || 0,
+      progress: e.progress || 0,
+      emoji: '📚',
+      thumbnailUrl: c.thumbnailUrl,
+      colorType: colors[index % colors.length],
+      status: e.progress === 100 ? 'completed' : 'enrolled',
+    };
+  });
 
   const displayCourses = mappedCourses.filter(c => {
     if (activeTab === 'In Progress') return c.status === 'enrolled';
