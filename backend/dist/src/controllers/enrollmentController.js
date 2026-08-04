@@ -1,6 +1,8 @@
+import mongoose from "mongoose";
 import Enrollment from "../models/Enrollment.js";
 import Course from "../models/Course.js";
 import User from "../models/User.js";
+import StudentProgress from "../models/StudentProgress.js";
 import { sendNotificationToUser } from "../utils/notificationService.js";
 import { checkAndAwardBadges } from "../utils/gamificationService.js";
 // @desc    Enroll student in a course
@@ -58,7 +60,14 @@ export const getMyEnrollments = async (req, res) => {
         const enrollments = await Enrollment.find({
             student: req.user?._id,
         }).populate("course", "title description thumbnailUrl instructor status");
-        res.json(enrollments);
+        const validEnrollments = enrollments.filter((e) => e.course != null);
+        const orphanEnrollmentIds = enrollments
+            .filter((e) => !e.course)
+            .map((e) => e._id);
+        if (orphanEnrollmentIds.length > 0) {
+            await Enrollment.deleteMany({ _id: { $in: orphanEnrollmentIds } });
+        }
+        res.json(validEnrollments);
     }
     catch (error) {
         res.status(500).json({ message: "Server Error" });
@@ -81,10 +90,31 @@ export const updateProgress = async (req, res) => {
             res.status(403).json({ message: "Not authorized for this enrollment" });
             return;
         }
-        // Add lesson if not already completed
-        if (completedLessonId &&
-            !enrollment.completedLessons.includes(completedLessonId)) {
-            enrollment.completedLessons.push(completedLessonId);
+        const alreadyCompleted = enrollment.completedLessons.some((id) => String(id) === String(completedLessonId));
+        if (completedLessonId && !alreadyCompleted) {
+            let lessonProgress = await StudentProgress.findOne({
+                student: enrollment.student,
+                course: enrollment.course,
+                lessonId: completedLessonId
+            });
+            if (!lessonProgress) {
+                lessonProgress = new StudentProgress({
+                    student: enrollment.student,
+                    course: enrollment.course,
+                    lessonId: completedLessonId,
+                    completed: true,
+                    completedAt: new Date()
+                });
+            }
+            else {
+                lessonProgress.completed = true;
+                lessonProgress.completedAt = new Date();
+            }
+            await lessonProgress.save();
+            const lessonObjId = mongoose.Types.ObjectId.isValid(completedLessonId)
+                ? new mongoose.Types.ObjectId(completedLessonId)
+                : completedLessonId;
+            enrollment.completedLessons.push(lessonObjId);
         }
         // Automatically calculate and update the progress percentage
         const course = await Course.findById(enrollment.course);

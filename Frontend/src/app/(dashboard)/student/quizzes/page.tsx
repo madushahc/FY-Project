@@ -23,7 +23,7 @@ export default function QuizzesPage() {
 
   useEffect(() => {
     fetchMyEnrollments();
-  }, [fetchMyEnrollments]);
+  }, []);
 
   useEffect(() => {
     const fetchQuizzes = async () => {
@@ -31,13 +31,15 @@ export default function QuizzesPage() {
       try {
         let agg: any[] = [];
         for (const enrollment of myEnrollments) {
-           const courseId = enrollment.course._id || enrollment.course;
-           const res = await api.get(`/quizzes/course/${courseId}`);
-           const mapped = res.data.map((q: any) => ({
-             ...q,
-             courseName: enrollment.course.title || 'Unknown Course'
-           }));
-           agg = [...agg, ...mapped];
+          if (!enrollment || !enrollment.course) continue;
+          const courseId = enrollment.course._id || enrollment.course;
+          if (!courseId) continue;
+          const res = await api.get(`/quizzes/course/${courseId}`);
+          const mapped = res.data.map((q: any) => ({
+            ...q,
+            courseName: enrollment.course?.title || 'Unknown Course'
+          }));
+          agg = [...agg, ...mapped];
         }
         setQuizzes(agg);
       } catch (err) {

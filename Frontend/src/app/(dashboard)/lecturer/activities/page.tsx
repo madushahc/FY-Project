@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -15,7 +15,7 @@ export default function LecturerActivities() {
 
    useEffect(() => {
       fetchMyCreatedCourses();
-   }, [fetchMyCreatedCourses]);
+   }, []);
 
    useEffect(() => {
       const fetchAllActivities = async () => {

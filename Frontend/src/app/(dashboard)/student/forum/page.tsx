@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -36,7 +36,7 @@ export default function DiscussionForum() {
   useEffect(() => {
     initializeUser();
     fetchMyEnrollments();
-  }, [fetchMyEnrollments, initializeUser]);
+  }, []);
 
   const fetchAllPosts = async () => {
     setLoading(true);

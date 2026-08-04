@@ -6,19 +6,6 @@ import { Check } from 'lucide-react';
 import { useCourseStore } from '@/store/useCourseStore';
 import api from '@/lib/api';
 
-const getCurrentDateTimeString = (offsetDays = 0) => {
-   const date = new Date();
-   if (offsetDays) {
-      date.setDate(date.getDate() + offsetDays);
-   }
-   const year = date.getFullYear();
-   const month = String(date.getMonth() + 1).padStart(2, '0');
-   const day = String(date.getDate()).padStart(2, '0');
-   const hours = String(date.getHours()).padStart(2, '0');
-   const minutes = String(date.getMinutes()).padStart(2, '0');
-   return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
-
 export default function AddQuiz() {
    const router = useRouter();
    const { myCourses, fetchMyCreatedCourses } = useCourseStore();
@@ -29,8 +16,6 @@ export default function AddQuiz() {
    const [timeLimit, setTimeLimit] = useState('15');
    const [passingScore, setPassingScore] = useState('60');
    const [loading, setLoading] = useState(false);
-   const [availableFrom, setAvailableFrom] = useState(getCurrentDateTimeString());
-   const [dueDate, setDueDate] = useState(getCurrentDateTimeString(1));
    const [attemptsAllowed, setAttemptsAllowed] = useState('1');
 
    const [questions, setQuestions] = useState([
@@ -39,7 +24,7 @@ export default function AddQuiz() {
 
    useEffect(() => {
       fetchMyCreatedCourses();
-   }, [fetchMyCreatedCourses]);
+   }, []);
 
    const handlePublish = async () => {
 
@@ -57,7 +42,6 @@ export default function AddQuiz() {
             totalPoints: Number(points),
             timeLimit: Number(timeLimit),
             passingScore: Number(passingScore),
-            dueDate: dueDate ? new Date(dueDate) : undefined,
             questions: questions.map(q => ({
                text: q.text,
                type: 'multiple-choice',
@@ -224,30 +208,6 @@ export default function AddQuiz() {
                            <option value="5">5 attempts</option>
                            <option value="unlimited">Unlimited attempts</option>
                         </select>
-                     </div>
-                  </div>
-               </div>
-
-               <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                  <h3 className="font-bold text-slate-800 mb-5">Due Date & Availability</h3>
-                  <div className="space-y-4">
-                     <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-2">Available From</label>
-                        <input 
-                           type="datetime-local" 
-                           value={availableFrom} 
-                           onChange={e => setAvailableFrom(e.target.value)} 
-                           className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm text-slate-700 shadow-sm focus:outline-none focus:border-blue-500 font-medium bg-white" 
-                        />
-                     </div>
-                     <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-2">Due Date</label>
-                        <input 
-                           type="datetime-local" 
-                           value={dueDate} 
-                           onChange={e => setDueDate(e.target.value)} 
-                           className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm text-slate-700 shadow-sm focus:outline-none focus:border-blue-500 font-medium bg-white" 
-                        />
                      </div>
                   </div>
                </div>

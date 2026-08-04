@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { Link as LinkIcon, Plus } from "lucide-react";
@@ -43,7 +43,7 @@ export default function AddAssignment() {
 
   useEffect(() => {
     fetchMyCreatedCourses();
-  }, [fetchMyCreatedCourses]);
+  }, []);
 
   const handleReferenceFilesUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,

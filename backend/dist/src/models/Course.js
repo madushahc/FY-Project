@@ -22,7 +22,33 @@ const CourseSchema = new Schema({
                     contentUrl: { type: String },
                     duration: { type: Number },
                     refId: { type: Schema.Types.ObjectId },
-                    points: { type: Number, default: 10 }
+                    points: { type: Number, default: 10 },
+                    description: { type: String },
+                    qrMarkers: [
+                        {
+                            timestamp: { type: Number, required: true },
+                            code: { type: String, required: true },
+                            label: { type: String, default: 'Scan QR Code' },
+                            points: { type: Number, default: 15 }
+                        }
+                    ],
+                    questionMarkers: [
+                        {
+                            timestamp: { type: Number, required: true },
+                            questionText: { type: String, required: true },
+                            questionType: { type: String, enum: ['mcq', 'true-false', 'matching'], default: 'mcq' },
+                            options: [{ type: String }],
+                            correctOption: { type: Number, default: 0 },
+                            matchingPairs: [
+                                {
+                                    term: { type: String, required: true },
+                                    definition: { type: String, required: true }
+                                }
+                            ],
+                            explanation: { type: String, default: '' },
+                            points: { type: Number, default: 20 }
+                        }
+                    ]
                 }
             ]
         }

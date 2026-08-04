@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from 'react';
 
@@ -48,7 +48,7 @@ export default function MyProgress() {
   React.useEffect(() => {
     fetchMyEnrollments();
     initializeUser();
-  }, [fetchMyEnrollments, initializeUser]);
+  }, []);
 
   const barChartData = [
     { day: 'Mon', h: '35%' },

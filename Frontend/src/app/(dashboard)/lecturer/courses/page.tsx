@@ -51,7 +51,7 @@ export default function LecturerCourseManagement() {
 
   useEffect(() => {
     fetchMyCreatedCourses();
-  }, [fetchMyCreatedCourses]);
+  }, []);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -213,62 +213,89 @@ export default function LecturerCourseManagement() {
           myCourses.map((course) => {
             const completion = courseStats[course._id]?.completionRate || 0;
             const students = course.enrollmentCount || 0;
+            const imageUrl = course.thumbnailUrl
+              ? course.thumbnailUrl.startsWith("http")
+                ? course.thumbnailUrl
+                : `${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:5000"}${course.thumbnailUrl}`
+              : null;
+
+            const allLessonsCount = course.modules?.reduce((sum: number, m: any) => sum + (m.lessons?.length || 0), 0) || 0;
+            const quizLessonsCount = course.modules?.reduce((sum: number, m: any) => sum + (m.lessons?.filter((l: any) => l.type === 'quiz').length || 0), 0) || 0;
+            const checkpointQuestionsCount = course.modules?.reduce((sum: number, m: any) => sum + (m.lessons?.reduce((qSum: number, l: any) => qSum + (l.questionMarkers?.length || 0), 0) || 0), 0) || 0;
+            const totalQuizzes = (courseStats[course._id]?.quizzesCount || 0) + quizLessonsCount + checkpointQuestionsCount;
+
+            const assignmentLessonsCount = course.modules?.reduce((sum: number, m: any) => sum + (m.lessons?.filter((l: any) => l.type === 'assignment').length || 0), 0) || 0;
+            const totalAssignments = (courseStats[course._id]?.assignmentsCount || 0) + assignmentLessonsCount;
+
             return (
               <div
                 key={course._id}
                 className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
               >
                 <div className="p-6">
-                  {/* Top Header of Card */}
-                  <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-6">
-                    <div>
-                      <h3 className="text-xl font-medium text-slate-800 mb-1">
-                        {course.title}
-                      </h3>
-                      <p className="text-sm text-slate-500 mb-3">
-                        {course.modules?.length || 0} modules
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                            course.status === "Published"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-orange-100 text-orange-700"
-                          }`}
-                        >
-                          {course.status || "Draft"}
-                        </span>
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600">
-                          {students} students
-                        </span>
+                  {/* Top Header of Card with Thumbnail */}
+                  <div className="flex flex-col md:flex-row items-start gap-5 mb-6">
+                    {imageUrl ? (
+                      <div className="w-full md:w-40 h-28 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200 shadow-sm">
+                        <img
+                          src={imageUrl}
+                          alt={course.title}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Link
-                        href={`/lecturer/courses/${course._id}/edit`}
-                        className="px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition"
-                      >
-                        Edit Course
-                      </Link>
-                      {course.status !== "Published" ? (
-                        <button
-                          onClick={() => handlePublish(course._id)}
-                          className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow-sm"
+                    ) : (
+                      <div className="w-full md:w-40 h-28 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-4xl shrink-0">
+                        📚
+                      </div>
+                    )}
+
+                    <div className="flex-1 min-w-0 flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                      <div>
+                        <h3 className="text-xl font-bold text-slate-800 mb-1">
+                          {course.title}
+                        </h3>
+                        <p className="text-sm text-slate-500 mb-3">
+                          {course.modules?.length || 0} modules • {allLessonsCount} lessons
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                              course.status === "Published"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-orange-100 text-orange-700"
+                            }`}
+                          >
+                            {course.status || "Draft"}
+                          </span>
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-600">
+                            {students} students
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/lecturer/courses/${course._id}/edit`}
+                          className="px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition"
                         >
-                          Publish
+                          Edit Course
+                        </Link>
+                        {course.status !== "Published" && (
+                          <button
+                            onClick={() => handlePublish(course._id)}
+                            className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition shadow-sm"
+                          >
+                            Publish
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDelete(course._id)}
+                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
+                          title="Delete Course"
+                        >
+                          <Trash2 className="w-5 h-5" />
                         </button>
-                      ) : (
-                        <button className="px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition">
-                          Analytics
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDelete(course._id)}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition"
-                        title="Delete Course"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                      </div>
                     </div>
                   </div>
 
@@ -292,17 +319,11 @@ export default function LecturerCourseManagement() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-slate-500 font-medium">
                     <div className="flex items-center gap-2">
                       <span className="text-base text-slate-400">📝</span>{" "}
-                      {statsLoading
-                        ? "..."
-                        : courseStats[course._id]?.quizzesCount || 0}{" "}
-                      Quizzes
+                      {statsLoading ? "..." : totalQuizzes} Quizzes
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-base text-slate-400">📎</span>{" "}
-                      {statsLoading
-                        ? "..."
-                        : courseStats[course._id]?.assignmentsCount || 0}{" "}
-                      Assignments
+                      {statsLoading ? "..." : totalAssignments} Assignments
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-base text-slate-400">💬</span>{" "}

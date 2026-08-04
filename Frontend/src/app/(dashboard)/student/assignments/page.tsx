@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from 'react';
 import { FileText, Clock, CheckCircle2, X, CloudUpload } from 'lucide-react';
@@ -26,7 +26,7 @@ export default function StudentAssignments() {
   useEffect(() => {
     fetchMyEnrollments();
     fetchMySubmissions();
-  }, [fetchMyEnrollments, fetchMySubmissions]);
+  }, []);
 
   // Aggregate pending assignments dynamically
   useEffect(() => {

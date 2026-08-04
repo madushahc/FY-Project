@@ -3,7 +3,7 @@ export interface INotification extends Document {
     recipient: mongoose.Types.ObjectId;
     title: string;
     message: string;
-    type: 'system' | 'assignment' | 'grade' | 'badge' | 'forum';
+    type: 'system' | 'assignment' | 'grade' | 'badge' | 'forum' | 'enroll' | 'course';
     linkUrl?: string;
     isRead: boolean;
     urgency: 'low' | 'normal' | 'high';

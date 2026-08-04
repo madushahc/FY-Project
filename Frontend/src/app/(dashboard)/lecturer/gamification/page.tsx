@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -91,7 +91,7 @@ export default function GamificationSettings() {
 
     fetchRules();
     fetchStudents();
-  }, [fetchBadges]);
+  }, []);
 
   const handleSaveRules = async () => {
     setSavingRules(true);

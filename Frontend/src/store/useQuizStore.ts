@@ -30,6 +30,7 @@ interface QuizState {
   fetchQuizById: (quizId: string) => Promise<void>;
   createQuiz: (data: any) => Promise<void>;
   submitQuizAttempt: (quizId: string, answers: Array<{ questionId: string; studentAnswer: string }>) => Promise<any>;
+  clearQuizzesForCourse: (courseId: string) => void;
 }
 
 export const useQuizStore = create<QuizState>((set) => ({
@@ -37,6 +38,17 @@ export const useQuizStore = create<QuizState>((set) => ({
   currentQuiz: null,
   loading: false,
   error: null,
+
+  clearQuizzesForCourse: (courseId: string) =>
+    set((state) => ({
+      quizzes: state.quizzes.filter(
+        (q) => (q.course?._id || (q.course as any)) !== courseId
+      ),
+      currentQuiz:
+        (state.currentQuiz?.course?._id || (state.currentQuiz?.course as any)) === courseId
+          ? null
+          : state.currentQuiz,
+    })),
 
   fetchQuizzesByCourse: async (courseId: string) => {
     set({ loading: true, error: null });
