@@ -101,10 +101,18 @@ export default function CoursePlayerView() {
   const currentEnrollment = myEnrollments.find(e => e?.course && ((e.course as any)._id === activeCourse?._id || (e.course as any) === activeCourse?._id));
   const completedLessons = (currentEnrollment as any)?.completedLessons || [];
 
-  // Calculate overall progress
+  // Calculate overall progress safely capped at 100%
   let totalLessons = 0;
-  modules.forEach(m => { totalLessons += (m.lessons?.length || 0); });
-  const progressPercent = totalLessons === 0 ? 0 : Math.round((completedLessons.length / totalLessons) * 100);
+  const validLessonIds = new Set<string>();
+  modules.forEach((m: any) => {
+    m.lessons?.forEach((l: any) => {
+      totalLessons++;
+      if (l._id) validLessonIds.add(String(l._id));
+      if (l.title) validLessonIds.add(String(l.title));
+    });
+  });
+  const validCompletedCount = completedLessons.filter((id: any) => validLessonIds.has(String(id))).length;
+  const progressPercent = totalLessons === 0 ? 0 : Math.min(100, Math.round((validCompletedCount / totalLessons) * 100));
 
   // Flatten all lessons across modules into a single ordered sequence
   const flatLessons: { mIdx: number; lIdx: number; lesson: any }[] = [];

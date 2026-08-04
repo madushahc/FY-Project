@@ -73,7 +73,7 @@ export const getMyEnrollments = async (
   try {
     const enrollments = await Enrollment.find({
       student: req.user?._id as any,
-    }).populate("course", "title description thumbnailUrl instructor status");
+    }).populate("course", "title description thumbnailUrl instructor status modules");
 
     const validEnrollments = enrollments.filter((e) => e.course != null);
     const orphanEnrollmentIds = enrollments
@@ -84,7 +84,29 @@ export const getMyEnrollments = async (
       await Enrollment.deleteMany({ _id: { $in: orphanEnrollmentIds } });
     }
 
-    res.json(validEnrollments);
+    // Ensure progress is always safely capped at 100% and recalculated accurately
+    const sanitizedEnrollments = validEnrollments.map((e) => {
+      const eObj = e.toObject();
+      const courseModules = (eObj.course as any)?.modules || [];
+      let totalLessons = 0;
+      const validLessonIds = new Set<string>();
+      courseModules.forEach((m: any) => {
+        m.lessons?.forEach((l: any) => {
+          totalLessons++;
+          if (l._id) validLessonIds.add(String(l._id));
+          if (l.title) validLessonIds.add(String(l.title));
+        });
+      });
+      if (totalLessons > 0) {
+        const completedCount = (eObj.completedLessons || []).filter((id: any) => validLessonIds.has(String(id))).length;
+        eObj.progress = Math.min(100, Math.round((completedCount / totalLessons) * 100));
+      } else {
+        eObj.progress = Math.min(100, Math.max(0, eObj.progress || 0));
+      }
+      return eObj;
+    });
+
+    res.json(sanitizedEnrollments);
   } catch (error) {
     res.status(500).json({ message: "Server Error" });
   }
@@ -144,16 +166,25 @@ export const updateProgress = async (
       enrollment.completedLessons.push(lessonObjId as any);
     }
 
-    // Automatically calculate and update the progress percentage
+    // Automatically calculate and update the progress percentage safely capped at 100%
     const course = await Course.findById(enrollment.course);
     if (course && course.modules) {
       let totalLessons = 0;
+      const validLessonIds = new Set<string>();
       course.modules.forEach((m: any) => {
-        totalLessons += m.lessons?.length || 0;
+        m.lessons?.forEach((l: any) => {
+          totalLessons++;
+          if (l._id) validLessonIds.add(String(l._id));
+          if (l.title) validLessonIds.add(String(l.title));
+        });
       });
+
+      const completedCount = enrollment.completedLessons.filter((id: any) => validLessonIds.has(String(id))).length;
+
       if (totalLessons > 0) {
-        enrollment.progress = Math.round(
-          (enrollment.completedLessons.length / totalLessons) * 100,
+        enrollment.progress = Math.min(
+          100,
+          Math.round((completedCount / totalLessons) * 100),
         );
       } else {
         enrollment.progress = 100; // If no lessons, it's 100% complete
@@ -162,7 +193,7 @@ export const updateProgress = async (
 
     // Fallback if manual progress provided
     if (req.body.progress !== undefined) {
-      enrollment.progress = req.body.progress;
+      enrollment.progress = Math.min(100, Math.max(0, req.body.progress));
     }
 
     const isCompletedNow = enrollment.progress === 100;

@@ -78,11 +78,24 @@ const checkAndMarkLessonCompletion = async (studentId, courseId, lessonId, lesso
             const alreadyCompleted = enrollment.completedLessons.some(id => id.toString() === String(lessonId));
             if (!alreadyCompleted) {
                 enrollment.completedLessons.push(lessonObjId);
-                // Calculate progress percentage
+                // Calculate progress percentage safely capped at 100%
                 let totalLessons = 0;
-                course?.modules.forEach(m => totalLessons += m.lessons.length);
+                const validLessonIds = new Set();
+                course?.modules.forEach((m) => {
+                    m.lessons?.forEach((l) => {
+                        totalLessons++;
+                        if (l._id)
+                            validLessonIds.add(String(l._id));
+                        if (l.title)
+                            validLessonIds.add(String(l.title));
+                    });
+                });
+                const completedCount = enrollment.completedLessons.filter((id) => validLessonIds.has(String(id))).length;
                 if (totalLessons > 0) {
-                    enrollment.progress = Math.round((enrollment.completedLessons.length / totalLessons) * 100);
+                    enrollment.progress = Math.min(100, Math.round((completedCount / totalLessons) * 100));
+                }
+                else {
+                    enrollment.progress = 100;
                 }
                 await enrollment.save();
             }

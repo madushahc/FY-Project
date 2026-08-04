@@ -190,7 +190,7 @@ export default function StudentDashboard() {
                 {validEnrollments.map((enrollment, index) => {
                   const courseTitle =
                     enrollment.course?.title || "Unknown Course";
-                  const progressValue = enrollment.progress || 0;
+                  const progressValue = Math.min(100, Math.max(0, enrollment.progress || 0));
                   const colorIdx = index % bgColors.length;
 
                   return (
