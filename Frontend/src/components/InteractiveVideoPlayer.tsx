@@ -36,6 +36,7 @@ interface Props {
   qrMarkers?: IQrMarker[];
   questionMarkers?: IQuestionMarker[];
   onCompletionChange?: (isCompleted: boolean, progressData: any) => void;
+  onUnlockNextLesson?: (lessonId: string, data: any) => void;
   onPointsAwarded?: (points: number, reason: string) => void;
 }
 
@@ -46,6 +47,7 @@ export default function InteractiveVideoPlayer({
   qrMarkers = [],
   questionMarkers = [],
   onCompletionChange,
+  onUnlockNextLesson,
   onPointsAwarded
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -60,7 +62,7 @@ export default function InteractiveVideoPlayer({
   const [watchPercent, setWatchPercent] = useState<number>(0);
   const [maxWatchedTime, setMaxWatchedTime] = useState<number>(0);
   const [videoWatched, setVideoWatched] = useState<boolean>(false);
-  const [minWatchPercentRequired, setMinWatchPercentRequired] = useState<number>(95);
+  const [minWatchPercentRequired, setMinWatchPercentRequired] = useState<number>(75);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [showCompletionBanner, setShowCompletionBanner] = useState<boolean>(false);
   const [loadingProgress, setLoadingProgress] = useState<boolean>(true);
@@ -154,9 +156,9 @@ export default function InteractiveVideoPlayer({
 
   const lastReportedPercentRef = useRef<number>(0);
 
-  // Send watch progress to backend — fires onCompletionChange only on new completion
+  // Send watch progress to backend — triggers onUnlockNextLesson at >=75% and onCompletionChange at 100%
   const sendWatchProgress = useCallback(async (pct: number, timeSec: number) => {
-    if (pct <= lastReportedPercentRef.current && pct < minWatchPercentRequired) return;
+    if (pct <= lastReportedPercentRef.current && pct < 75) return;
     lastReportedPercentRef.current = pct;
     try {
       const { data } = await api.post(`/courses/${courseId}/lessons/${lessonId}/watch-progress`, {
@@ -165,7 +167,14 @@ export default function InteractiveVideoPlayer({
       });
       if (data.watchPercent !== undefined) setWatchPercent(data.watchPercent);
       if (data.videoWatched !== undefined) setVideoWatched(data.videoWatched);
-      if (data.isLessonCompleted || pct >= minWatchPercentRequired) {
+
+      // 1. Unlock Next Lesson at 75% Watch Threshold
+      if ((data.isNextUnlocked || pct >= 75) && onUnlockNextLesson) {
+        onUnlockNextLesson(lessonId, data);
+      }
+
+      // 2. Mark Current Lesson Completed ONLY at 100% (or backend completion trigger)
+      if (data.isLessonCompleted || pct >= 100) {
         if (!isCompletedRef.current) {
           isCompletedRef.current = true;
           setIsCompleted(true);
@@ -178,7 +187,7 @@ export default function InteractiveVideoPlayer({
     } catch (err) {
       console.error("Failed to record watch progress", err);
     }
-  }, [courseId, lessonId, minWatchPercentRequired, onCompletionChange]);
+  }, [courseId, lessonId, onCompletionChange, onUnlockNextLesson]);
 
   // Fetch student progress for this lesson (on mount — restores state without triggering completion callback)
   const fetchProgress = useCallback(async () => {
@@ -194,6 +203,10 @@ export default function InteractiveVideoPlayer({
       setVideoWatched(data.videoWatched || false);
       setMinWatchPercentRequired(data.minWatchPercentRequired || 75);
       lastReportedPercentRef.current = data.watchPercent || 0;
+
+      if ((data.isNextUnlocked || (data.watchPercent || 0) >= 75) && onUnlockNextLesson) {
+        onUnlockNextLesson(lessonId, { ...data, isRestoring: true });
+      }
 
       const alreadyCompleted = Boolean(data.completed || data.allRequirementsMet);
       setIsCompleted(alreadyCompleted);

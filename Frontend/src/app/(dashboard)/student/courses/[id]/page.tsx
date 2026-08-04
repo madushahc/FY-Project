@@ -19,6 +19,7 @@ export default function CoursePlayerView() {
   const [activeLessonIndex, setActiveLessonIndex] = useState(0);
   const [isInteractiveCompleted, setIsInteractiveCompleted] = useState<boolean>(false);
   const [sessionCompletedLessons, setSessionCompletedLessons] = useState<Set<string>>(new Set());
+  const [unlockedLessons, setUnlockedLessons] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (params.id) {
@@ -35,6 +36,16 @@ export default function CoursePlayerView() {
     const { fetchUserProfile, fetchGamification } = useUserStore.getState();
     fetchUserProfile();
     fetchGamification();
+  }, []);
+
+  const handleUnlockNextLesson = useCallback((unlockedLessonId: string, _data: any) => {
+    if (unlockedLessonId) {
+      setUnlockedLessons((prev) => {
+        const next = new Set(prev);
+        next.add(String(unlockedLessonId));
+        return next;
+      });
+    }
   }, []);
 
   const handleLessonCompletionChange = useCallback((completed: boolean, _data: any) => {
@@ -112,7 +123,7 @@ export default function CoursePlayerView() {
     return false;
   };
 
-  // Determine if a lesson in the menu is locked (must complete all preceding lessons first)
+  // Determine if a lesson in the menu is locked (must reach 75% or complete preceding lesson first)
   const isLessonLocked = (targetMIdx: number, targetLIdx: number) => {
     const targetIdx = flatLessons.findIndex(
       (item) => item.mIdx === targetMIdx && item.lIdx === targetLIdx
@@ -121,13 +132,19 @@ export default function CoursePlayerView() {
 
     const prevItem = flatLessons[targetIdx - 1];
     if (!prevItem || !prevItem.lesson?._id) return false;
+    const prevId = String(prevItem.lesson._id);
 
-    const prevDone = isLessonCompleted(prevItem.lesson._id, prevItem.mIdx, prevItem.lIdx);
-    return !prevDone;
+    const prevUnlocked = unlockedLessons.has(prevId);
+    const prevCompleted = isLessonCompleted(prevId, prevItem.mIdx, prevItem.lIdx);
+
+    return !(prevUnlocked || prevCompleted);
   };
 
-  // Gating check: Is the active lesson completed or satisfied?
-  const isActiveLessonDone = Boolean(activeLesson?._id) && isLessonCompleted(activeLesson._id, activeModuleIndex, activeLessonIndex);
+  // Gating check: Is the active lesson completed (100%) or has unlocked the next lesson (75% watched)?
+  const isActiveLessonDone = Boolean(activeLesson?._id) && (
+    isLessonCompleted(activeLesson._id, activeModuleIndex, activeLessonIndex) ||
+    unlockedLessons.has(String(activeLesson._id))
+  );
 
   const getLessonIcon = (type: string, isCompleted: boolean, isLocked: boolean) => {
     if (isCompleted) return <Check className="w-4 h-4 text-white" strokeWidth={3} />;
@@ -155,7 +172,7 @@ export default function CoursePlayerView() {
 
   const handleLessonSelect = (modIdx: number, lesIdx: number) => {
     if (isLessonLocked(modIdx, lesIdx)) {
-      alert("Lesson Locked 🔒: You must complete the previous lesson (watch video 95%+ and complete all checkpoint activities) before unlocking this lesson!");
+      alert("Lesson Locked 🔒: You must watch at least 75% of the previous video to unlock this lesson!");
       return;
     }
     setActiveModuleIndex(modIdx);
@@ -166,7 +183,7 @@ export default function CoursePlayerView() {
   const goToNext = () => {
     if (!activeModule || !activeLesson) return;
     if (!isActiveLessonDone) {
-      alert("Lesson Incomplete 🔒: Please finish watching the video to the required duration (95%+) and complete all checkpoint activities to unlock the next lesson!");
+      alert("Lesson Locked 🔒: Please watch at least 75% of the video to unlock the next lesson!");
       return;
     }
 
@@ -207,6 +224,7 @@ export default function CoursePlayerView() {
           qrMarkers={activeLesson.qrMarkers || []}
           questionMarkers={activeLesson.questionMarkers || []}
           onCompletionChange={handleLessonCompletionChange}
+          onUnlockNextLesson={handleUnlockNextLesson}
           onPointsAwarded={handlePointsEarned}
         />
       );

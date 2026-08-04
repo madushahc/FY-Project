@@ -60,11 +60,11 @@ const checkAndMarkLessonCompletion = async (studentId, courseId, lessonId, lesso
     const isReadingLesson = typeStr === 'reading';
     const isNonVideoType = typeStr === 'reading' || typeStr === 'assignment' || typeStr === 'quiz' || typeStr === 'link';
     const isVideoLesson = typeStr === 'video' || (!isNonVideoType && Boolean(lesson.contentUrl || lesson.videoUrl));
-    const isVideoSatisfied = !isVideoLesson || Boolean(progress.videoWatched) || ((progress.watchPercent || 0) >= minWatchPercent);
+    const isVideoSatisfied = !isVideoLesson || Boolean(progress.videoWatched) || ((progress.watchPercent || 0) >= 100);
     const isReadingSatisfied = !isReadingLesson || ((progress.watchPercent || 0) >= 90);
     // Require at least one completion criterion to exist (video, reading, QR, or question).
     const hasAnyRequirement = totalQrRequired > 0 || totalQuestionsRequired > 0 || isVideoLesson || isReadingLesson;
-    if (hasAnyRequirement && (isVideoSatisfied || isReadingSatisfied || (allQrScanned && allQuestionsPassed))) {
+    if (hasAnyRequirement && allQrScanned && allQuestionsPassed && isVideoSatisfied && isReadingSatisfied) {
         progress.completed = true;
         if (!progress.completedAt) {
             progress.completedAt = new Date();
@@ -289,18 +289,19 @@ export const recordWatchProgress = async (req, res) => {
         const newMaxWatchedTime = Math.max(progress.maxWatchedTime || 0, Number(currentTime) || 0);
         progress.watchPercent = newWatchPercent;
         progress.maxWatchedTime = newMaxWatchedTime;
-        const minWatchPercent = course?.completionRules?.minLessonWatchPercent || 75;
-        if (newWatchPercent >= minWatchPercent) {
+        if (newWatchPercent >= 100) {
             progress.videoWatched = true;
         }
         await progress.save();
         const isLessonCompleted = await checkAndMarkLessonCompletion(userId, courseId, lessonId, lesson);
+        const isNextUnlocked = newWatchPercent >= 75;
         res.json({
             success: true,
             watchPercent: progress.watchPercent,
             maxWatchedTime: progress.maxWatchedTime,
             videoWatched: progress.videoWatched,
-            minWatchPercentRequired: minWatchPercent,
+            minWatchPercentRequired: 75,
+            isNextUnlocked,
             isLessonCompleted
         });
     }
