@@ -4,6 +4,7 @@ export interface IQuestion {
     type: 'multiple-choice' | 'true-false' | 'short-answer';
     options?: string[];
     correctAnswer: string;
+    hiddenPrompt?: string;
     points: number;
 }
 export interface IQuiz extends Document {
@@ -15,6 +16,12 @@ export interface IQuiz extends Document {
     passingScore: number;
     isPublished: boolean;
     dueDate?: Date;
+    maxAttempts?: number;
+    oneAttemptOnly?: boolean;
+    attemptsAllowed?: number;
+    totalPoints?: number;
+    difficultyLevel?: 'Easy' | 'Medium' | 'Hard';
+    isFinalQuiz?: boolean;
 }
 declare const _default: mongoose.Model<IQuiz, {}, {}, {}, mongoose.Document<unknown, {}, IQuiz, {}, mongoose.DefaultSchemaOptions> & IQuiz & Required<{
     _id: mongoose.Types.ObjectId;

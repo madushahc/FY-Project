@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useCourseStore } from '@/store/useCourseStore';
 import Loading from '@/components/ui/Loading';
@@ -17,66 +17,84 @@ export default function LecturerDashboard() {
   });
   const [statsLoading, setStatsLoading] = useState(true);
 
+  const getStats = useCallback(async () => {
+    if (myCourses.length === 0) {
+      setStatsLoading(false);
+      return;
+    }
+    try {
+      // 1. Fetch lecturer students (enrollments)
+      const studentsRes = await api.get('/courses/lecturer/students');
+      const enrollments = studentsRes.data || [];
+      const totalEnrollments = enrollments.length;
+      
+      const avgComp = totalEnrollments > 0
+        ? Math.round(enrollments.reduce((acc: number, curr: any) => acc + (curr.progress || 0), 0) / totalEnrollments)
+        : 0;
+        
+      const partRate = totalEnrollments > 0
+        ? Math.round((enrollments.filter((curr: any) => curr.progress > 0).length / totalEnrollments) * 100)
+        : 0;
+
+      // 2. Fetch all assignments and count pending submissions
+      let totalPendingGrades = 0;
+      for (const course of myCourses) {
+        try {
+          const assignRes = await api.get(`/assignments/course/${course._id}`);
+          const assignments = assignRes.data || [];
+          for (const assn of assignments) {
+            try {
+              const subsRes = await api.get(`/submissions/assignment/${assn._id}`);
+              const submissions = subsRes.data || [];
+              const pendingCount = submissions.filter((sub: any) => sub.status !== 'Graded').length;
+              totalPendingGrades += pendingCount;
+            } catch (e) {}
+          }
+        } catch (e) {}
+      }
+
+      setStats({
+        participationRate: totalEnrollments > 0 ? `${partRate}%` : '0%',
+        pendingGrades: `${totalPendingGrades}`,
+        avgCompletion: totalEnrollments > 0 ? `${avgComp}%` : '0%'
+      });
+    } catch (err) {
+      console.error("Failed to fetch lecturer analytics:", err);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [myCourses]);
+
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
     fetchMyCreatedCourses();
-  }, []);
+  }, [fetchMyCreatedCourses]);
 
   useEffect(() => {
-    const getStats = async () => {
-      if (myCourses.length === 0) {
-        setStatsLoading(false);
-        return;
-      }
-      setStatsLoading(true);
-      try {
-        // 1. Fetch lecturer students (enrollments)
-        const studentsRes = await api.get('/courses/lecturer/students');
-        const enrollments = studentsRes.data || [];
-        const totalEnrollments = enrollments.length;
-        
-        const avgComp = totalEnrollments > 0
-          ? Math.round(enrollments.reduce((acc: number, curr: any) => acc + (curr.progress || 0), 0) / totalEnrollments)
-          : 0;
-          
-        const partRate = totalEnrollments > 0
-          ? Math.round((enrollments.filter((curr: any) => curr.progress > 0).length / totalEnrollments) * 100)
-          : 0;
+    getStats();
 
-        // 2. Fetch all assignments and count pending submissions
-        let totalPendingGrades = 0;
-        for (const course of myCourses) {
-          try {
-            const assignRes = await api.get(`/assignments/course/${course._id}`);
-            const assignments = assignRes.data || [];
-            for (const assn of assignments) {
-              try {
-                const subsRes = await api.get(`/submissions/assignment/${assn._id}`);
-                const submissions = subsRes.data || [];
-                const pendingCount = submissions.filter((sub: any) => sub.status !== 'Graded').length;
-                totalPendingGrades += pendingCount;
-              } catch (e) {}
-            }
-          } catch (e) {}
-        }
-
-        setStats({
-          participationRate: totalEnrollments > 0 ? `${partRate}%` : '0%',
-          pendingGrades: `${totalPendingGrades}`,
-          avgCompletion: totalEnrollments > 0 ? `${avgComp}%` : '0%'
-        });
-      } catch (err) {
-        console.error("Failed to fetch lecturer analytics:", err);
-      } finally {
-        setStatsLoading(false);
-      }
+    // Real-time auto-refresh on window focus and every 5 seconds
+    const handleFocus = () => {
+      fetchMyCreatedCourses();
+      getStats();
     };
 
-    getStats();
-  }, [myCourses]);
+    const intervalId = setInterval(() => {
+      getStats();
+    }, 5000);
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleFocus);
+      clearInterval(intervalId);
+    };
+  }, [myCourses, getStats, fetchMyCreatedCourses]);
 
   const activeCourseCount = myCourses.length;
   const totalStudents = myCourses.reduce((acc, course) => acc + (course.enrollmentCount || 0), 0);

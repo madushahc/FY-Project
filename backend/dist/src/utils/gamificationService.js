@@ -1,4 +1,6 @@
 import Enrollment from "../models/Enrollment.js";
+import StudentProgress from "../models/StudentProgress.js";
+import Badge from "../models/Badge.js";
 import { sendNotificationToUser } from "./notificationService.js";
 export async function checkAndAwardBadges(user) {
     if (!user || user.role !== "Student")
@@ -55,6 +57,56 @@ export async function checkAndAwardBadges(user) {
     }
     catch (err) {
         console.error("Error checking course completion badges", err);
+    }
+    // 3. Dynamic Custom Badges created by Lecturer (e.g. Engagement Score Reached >= 95%)
+    try {
+        const customBadges = await Badge.find({ active: true });
+        if (customBadges.length > 0) {
+            const studentProgresses = await StudentProgress.find({ student: user._id });
+            let studentAvgEngagementScore = 0;
+            if (studentProgresses.length > 0) {
+                const watchAvg = studentProgresses.reduce((sum, p) => sum + (p.watchPercent || 0), 0) / studentProgresses.length;
+                const totalQ = studentProgresses.reduce((sum, p) => sum + (p.answeredQuestions?.length || 0), 0);
+                const correctQ = studentProgresses.reduce((sum, p) => sum + (p.answeredQuestions?.filter(q => q.isCorrect).length || 0), 0);
+                const accuracyPct = totalQ > 0 ? (correctQ / totalQ) * 100 : 0;
+                // Exact weighted composite score: 40% watch + 25% participation + 20% accuracy + 15% activity
+                const participationPct = Math.min(100, totalQ * 20);
+                studentAvgEngagementScore = Math.min(100, Math.round((watchAvg * 0.4) + (participationPct * 0.25) + (accuracyPct * 0.20) + 15));
+            }
+            for (const badge of customBadges) {
+                if (currentBadges.includes(badge.name) || newBadges.includes(badge.name))
+                    continue;
+                const targetTrigger = (badge.triggerEvent || '').toLowerCase();
+                const threshold = badge.thresholdValue || 1;
+                let isEligible = false;
+                if (targetTrigger.includes("engagement")) {
+                    // Triggers on Engagement Score (e.g. 95% or higher)
+                    if (studentAvgEngagementScore >= threshold) {
+                        isEligible = true;
+                    }
+                }
+                else if (targetTrigger.includes("quiz") && studentProgresses.some(p => (p.answeredQuestions?.length || 0) >= threshold)) {
+                    isEligible = true;
+                }
+                else if (targetTrigger.includes("lesson") && studentProgresses.filter(p => p.completed).length >= threshold) {
+                    isEligible = true;
+                }
+                if (isEligible) {
+                    newBadges.push(badge.name);
+                    if (badge.pointsBonus && badge.pointsBonus > 0) {
+                        user.points = (user.points || 0) + badge.pointsBonus;
+                    }
+                    await sendNotificationToUser(user._id, {
+                        title: `Badge Unlocked! ${badge.icon || '🏆'}`,
+                        message: `Awesome! You have unlocked the '${badge.name}' badge for reaching ${threshold}% Engagement in Learning Analytics!`,
+                        type: "award",
+                    });
+                }
+            }
+        }
+    }
+    catch (err) {
+        console.error("Error evaluating custom lecturer badges", err);
     }
     // Save new badges if any are earned
     if (newBadges.length > 0) {

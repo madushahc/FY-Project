@@ -1,6 +1,6 @@
 import express from 'express';
 import { getCourses, getCourseById, createCourse, updateCourse, deleteCourse, getLecturerStudents } from '../controllers/courseController.js';
-import { recordQrScan, recordQuestionAnswer, getLessonProgress, getInteractiveAnalytics, recordWatchProgress } from '../controllers/interactiveLessonController.js';
+import { recordQuestionAnswer, getLessonProgress, getInteractiveAnalytics, recordWatchProgress } from '../controllers/interactiveLessonController.js';
 import { protect, authorize } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 
@@ -17,8 +17,6 @@ const router = express.Router();
 router.get('/analytics/interactive', protect, authorize('Lecturer', 'Admin'), getInteractiveAnalytics);
 
 // Interactive video lesson endpoints
-router.post('/qr-scan', protect, recordQrScan);
-router.post('/:courseId/lessons/:lessonId/qr-scan', protect, recordQrScan);
 router.post('/:courseId/lessons/:lessonId/answer', protect, recordQuestionAnswer);
 router.post('/:courseId/lessons/:lessonId/watch-progress', protect, recordWatchProgress);
 router.get('/:courseId/lessons/:lessonId/progress', protect, getLessonProgress);

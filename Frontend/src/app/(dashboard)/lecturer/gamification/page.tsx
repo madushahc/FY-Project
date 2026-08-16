@@ -1,22 +1,92 @@
-﻿"use client";
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   X, Award, ShieldAlert, Star, Trophy, Users, Send, Settings,
   Check, RefreshCw, Plus, Sparkles, BookOpen, MessageSquare, Clock, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { useGamificationStore } from '@/store/useGamificationStore';
 import api from '@/lib/api';
+const SYSTEM_BADGES = [
+  {
+    _id: "sys_bronze",
+    name: "Bronze Medal",
+    description: "Awarded automatically when a student accumulates 100+ XP points.",
+    icon: "🥉",
+    category: "Achievement",
+    triggerEvent: "Points Reached",
+    thresholdValue: 100,
+    pointsBonus: 0,
+    active: true,
+    isSystem: true,
+  },
+  {
+    _id: "sys_silver",
+    name: "Silver Medal",
+    description: "Awarded automatically when a student accumulates 500+ XP points.",
+    icon: "🥈",
+    category: "Achievement",
+    triggerEvent: "Points Reached",
+    thresholdValue: 500,
+    pointsBonus: 0,
+    active: true,
+    isSystem: true,
+  },
+  {
+    _id: "sys_gold",
+    name: "Gold Medal",
+    description: "Awarded automatically when a student accumulates 1,000+ XP points.",
+    icon: "🥇",
+    category: "Achievement",
+    triggerEvent: "Points Reached",
+    thresholdValue: 1000,
+    pointsBonus: 0,
+    active: true,
+    isSystem: true,
+  },
+  {
+    _id: "sys_first_step",
+    name: "First Step",
+    description: "Awarded automatically when a student completes their first course.",
+    icon: "🚀",
+    category: "Academic",
+    triggerEvent: "Course Completed",
+    thresholdValue: 1,
+    pointsBonus: 0,
+    active: true,
+    isSystem: true,
+  },
+  {
+    _id: "sys_course_master",
+    name: "Course Master",
+    description: "Awarded automatically when a student completes 3 or more courses.",
+    icon: "🎓",
+    category: "Academic",
+    triggerEvent: "Courses Completed",
+    thresholdValue: 3,
+    pointsBonus: 0,
+    active: true,
+    isSystem: true,
+  },
+];
 
 export default function GamificationSettings() {
   const {
     createBadge,
     fetchBadges,
-    badges,
+    badges = [],
     awardPoints,
     awardBadge,
     toggleBadgeActive
   } = useGamificationStore();
+
+  // Combine MongoDB database badges with fallback catalog
+  const displayBadges: any[] = [...(badges || [])];
+  SYSTEM_BADGES.forEach((sb) => {
+    if (!displayBadges.some((b: any) => b && b.name && b.name.toLowerCase() === sb.name.toLowerCase())) {
+      displayBadges.push(sb);
+    }
+  });
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<'rules' | 'badges'>('rules');
@@ -56,42 +126,60 @@ export default function GamificationSettings() {
     isVisible: true
   });
 
+  // Fetch current rules
+  const fetchRules = useCallback(async () => {
+    try {
+      const res = await api.get('/gamification/rules');
+      if (res.data) {
+        setPointRules({
+          lesson: res.data.lesson || 10,
+          quiz: res.data.quiz || 50,
+          assignment: res.data.assignment || 80,
+          forum: res.data.forum || 5
+        });
+      }
+    } catch (err) {
+      console.error("Failed to fetch rules", err);
+    }
+  }, []);
+
+  // Fetch students list
+  const fetchStudents = useCallback(async () => {
+    try {
+      const res = await api.get('/courses/lecturer/students');
+      setStudents(res.data || []);
+    } catch (err) {
+      console.error("Failed to fetch students", err);
+    } finally {
+      setLoadingStudents(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchBadges();
-
-    // Fetch current rules
-    const fetchRules = async () => {
-      try {
-        const res = await api.get('/gamification/rules');
-        if (res.data) {
-          setPointRules({
-            lesson: res.data.lesson || 10,
-            quiz: res.data.quiz || 50,
-            assignment: res.data.assignment || 80,
-            forum: res.data.forum || 5
-          });
-        }
-      } catch (err) {
-        console.error("Failed to fetch rules", err);
-      }
-    };
-
-    // Fetch students list
-    const fetchStudents = async () => {
-      setLoadingStudents(true);
-      try {
-        const res = await api.get('/courses/lecturer/students');
-        setStudents(res.data || []);
-      } catch (err) {
-        console.error("Failed to fetch students", err);
-      } finally {
-        setLoadingStudents(false);
-      }
-    };
-
     fetchRules();
     fetchStudents();
-  }, []);
+
+    const handleFocus = () => {
+      fetchBadges();
+      fetchRules();
+      fetchStudents();
+    };
+
+    const intervalId = setInterval(() => {
+      fetchBadges();
+      fetchStudents();
+    }, 5000);
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleFocus);
+      clearInterval(intervalId);
+    };
+  }, [fetchBadges, fetchRules, fetchStudents]);
 
   const handleSaveRules = async () => {
     setSavingRules(true);
@@ -208,8 +296,8 @@ export default function GamificationSettings() {
         <button
           onClick={() => setActiveTab('rules')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition ${activeTab === 'rules'
-              ? 'bg-white text-blue-600 shadow-sm'
-              : 'text-slate-500 hover:text-slate-800'
+            ? 'bg-white text-blue-600 shadow-sm'
+            : 'text-slate-500 hover:text-slate-800'
             }`}
         >
           <Settings className="w-4 h-4" /> Point Rules & Manual Awards
@@ -217,11 +305,11 @@ export default function GamificationSettings() {
         <button
           onClick={() => setActiveTab('badges')}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition ${activeTab === 'badges'
-              ? 'bg-white text-blue-600 shadow-sm'
-              : 'text-slate-500 hover:text-slate-800'
+            ? 'bg-white text-blue-600 shadow-sm'
+            : 'text-slate-500 hover:text-slate-800'
             }`}
         >
-          <Award className="w-4 h-4" /> Badges Library ({badges.length})
+          <Award className="w-4 h-4" /> Badges Library ({displayBadges.length})
         </button>
       </div>
 
@@ -392,8 +480,8 @@ export default function GamificationSettings() {
                       type="button"
                       onClick={() => setAwardType('points')}
                       className={`py-2 text-xs font-bold rounded-lg transition ${awardType === 'points'
-                          ? 'bg-white text-indigo-600 shadow-sm'
-                          : 'text-slate-500 hover:text-slate-800'
+                        ? 'bg-white text-indigo-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-800'
                         }`}
                     >
                       ⭐ XP Points
@@ -402,8 +490,8 @@ export default function GamificationSettings() {
                       type="button"
                       onClick={() => setAwardType('badge')}
                       className={`py-2 text-xs font-bold rounded-lg transition ${awardType === 'badge'
-                          ? 'bg-white text-indigo-600 shadow-sm'
-                          : 'text-slate-500 hover:text-slate-800'
+                        ? 'bg-white text-indigo-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-800'
                         }`}
                     >
                       🏆 Custom Badge
@@ -447,9 +535,9 @@ export default function GamificationSettings() {
                       required
                     >
                       <option value="">-- Choose Badge --</option>
-                      {badges.filter(b => b.active !== false).map((badge) => (
+                      {displayBadges.filter(b => b.active !== false).map((badge) => (
                         <option key={badge._id} value={badge.name}>
-                          {badge.icon} {badge.name}
+                          {badge.icon} {badge.name} {badge.isSystem ? '(System Badge)' : ''}
                         </option>
                       ))}
                     </select>
@@ -486,7 +574,7 @@ export default function GamificationSettings() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {badges.length === 0 ? (
+            {displayBadges.length === 0 ? (
               <div className="col-span-full bg-white border border-slate-250 p-12 text-center rounded-3xl">
                 <p className="text-slate-500 font-semibold mb-2">No badges have been seeded or created yet.</p>
                 <button
@@ -497,7 +585,7 @@ export default function GamificationSettings() {
                 </button>
               </div>
             ) : (
-              badges.map((badge) => (
+              displayBadges.map((badge) => (
                 <div
                   key={badge._id}
                   className={`bg-white border rounded-3xl p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between relative ${badge.active !== false ? 'border-slate-200' : 'border-slate-100 opacity-60'
@@ -506,26 +594,39 @@ export default function GamificationSettings() {
                   <div>
                     {/* Badge Category Tag & Toggle */}
                     <div className="flex justify-between items-start mb-4">
-                      <span className={`text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-full ${badge.category === 'Streak' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
+                      <div className="flex gap-1.5 flex-wrap">
+                        {badge.isSystem && (
+                          <span className="text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+                            ⭐ System Default
+                          </span>
+                        )}
+                        <span className={`text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-1 rounded-full ${badge.category === 'Streak' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
                           badge.category === 'Academic' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
                             badge.category === 'Engagement' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
                               'bg-slate-50 text-slate-650 border border-slate-150'
-                        }`}>
-                        {badge.category || 'Achievement'}
-                      </span>
+                          }`}>
+                          {badge.category || 'Achievement'}
+                        </span>
+                      </div>
 
-                      {/* Interactive Active Toggle */}
-                      <button
-                        onClick={() => handleToggleBadge(badge._id)}
-                        title={badge.active !== false ? "Disable Badge" : "Enable Badge"}
-                        className="text-slate-400 hover:text-blue-600 transition"
-                      >
-                        {badge.active !== false ? (
-                          <ToggleRight className="w-9 h-9 text-blue-600" />
-                        ) : (
-                          <ToggleLeft className="w-9 h-9 text-slate-350" />
-                        )}
-                      </button>
+                      {/* Interactive Active Toggle (Custom badges) */}
+                      {!badge.isSystem ? (
+                        <button
+                          onClick={() => handleToggleBadge(badge._id)}
+                          title={badge.active !== false ? "Disable Badge" : "Enable Badge"}
+                          className="text-slate-400 hover:text-blue-600 transition"
+                        >
+                          {badge.active !== false ? (
+                            <ToggleRight className="w-9 h-9 text-blue-600" />
+                          ) : (
+                            <ToggleLeft className="w-9 h-9 text-slate-350" />
+                          )}
+                        </button>
+                      ) : (
+                        <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                          Active
+                        </span>
+                      )}
                     </div>
 
                     {/* Emoji representation */}
@@ -660,21 +761,32 @@ export default function GamificationSettings() {
                   <div className="flex-1">
                     <label className="block text-[11px] font-bold text-slate-600 mb-1">Trigger Event</label>
                     <select
-                      className="w-full text-xs font-bold p-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-blue-500 text-slate-600"
+                      className="w-full text-xs font-bold p-2.5 border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-blue-500 text-slate-600 cursor-pointer"
                       value={newBadge.triggerEvent}
-                      onChange={(e) => setNewBadge({ ...newBadge, triggerEvent: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewBadge({
+                          ...newBadge,
+                          triggerEvent: val,
+                          thresholdValue: val === 'Engagement Score Reached' ? 95 : newBadge.thresholdValue || 1
+                        });
+                      }}
                     >
                       <option value="Manual Award">Manual Award (Lecturer Controlled)</option>
+                      <option value="Engagement Score Reached">Engagement Score Reached (Learning Analytics %)</option>
                       <option value="Quiz Passed">Quiz Passed</option>
                       <option value="Lesson Completed">Lesson Completed</option>
                       <option value="Streak Maintained">Streak Maintained</option>
                     </select>
                   </div>
-                  <div className="w-full sm:w-28">
-                    <label className="block text-[11px] font-bold text-slate-600 mb-1">Threshold</label>
+                  <div className="w-full sm:w-32">
+                    <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                      {newBadge.triggerEvent === 'Engagement Score Reached' ? 'Target Score (%)' : 'Threshold'}
+                    </label>
                     <input
                       type="number"
                       min={1}
+                      max={newBadge.triggerEvent === 'Engagement Score Reached' ? 100 : 9999}
                       value={newBadge.thresholdValue}
                       disabled={newBadge.triggerEvent === 'Manual Award'}
                       onChange={(e) => setNewBadge({ ...newBadge, thresholdValue: Math.max(1, parseInt(e.target.value) || 0) })}
@@ -682,7 +794,11 @@ export default function GamificationSettings() {
                     />
                   </div>
                 </div>
-                {newBadge.triggerEvent !== 'Manual Award' ? (
+                {newBadge.triggerEvent === 'Engagement Score Reached' ? (
+                  <p className="text-[10px] font-bold text-purple-700 flex items-center gap-1 bg-purple-50 p-2 rounded-lg border border-purple-200">
+                    <span>⚡</span> Automatically awarded to students when their composite Learning Analytics Engagement Score reaches {newBadge.thresholdValue}% or higher (e.g. 95%+).
+                  </p>
+                ) : newBadge.triggerEvent !== 'Manual Award' ? (
                   <p className="text-[10px] font-bold text-blue-600 flex items-center gap-1">
                     <span>✨</span> Automatically awarded to student upon the {newBadge.thresholdValue}th {newBadge.triggerEvent}.
                   </p>
@@ -722,7 +838,7 @@ export default function GamificationSettings() {
                 type="button"
                 onClick={handleCreateBadge}
                 disabled={isSubmitting}
-                className="px-6 py-2.5 bg-blue-650 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition shadow-sm disabled:opacity-50"
+                className="px-6 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition shadow-sm disabled:opacity-50"
               >
                 {isSubmitting ? 'Creating...' : 'Publish New Badge'}
               </button>

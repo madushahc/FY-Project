@@ -110,7 +110,10 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
   const { email, password, role } = req.body;
 
   try {
-    const user = await User.findOne({ email });
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
 
     if (user && (await bcrypt.compare(password, user.passwordHash))) {
       const requestedRole = String(role || "")
@@ -122,7 +125,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 
       if (requestedRole && requestedRole !== actualRole) {
         res.status(403).json({
-          message: `Please check your credentials.`,
+          message: `This account is registered as a ${user.role}. Please select the ${user.role} role tab to sign in.`,
         });
         return;
       }

@@ -27,8 +27,8 @@ export default function TopNav({
     // ensure store is populated from localStorage so avatar updates reflect
     if (typeof window !== "undefined") {
       initializeUser();
-      if (fetchNotifications) fetchNotifications().catch(() => {});
-      if (fetchUserProfile) fetchUserProfile().catch(() => {});
+      if (fetchNotifications) fetchNotifications().catch(() => { });
+      if (fetchUserProfile) fetchUserProfile().catch(() => { });
     }
 
     function handleClickOutside(event: MouseEvent) {
@@ -52,15 +52,7 @@ export default function TopNav({
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Search */}
-        <div className="relative w-64 hidden md:block">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search courses, activities..."
-            className="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-          />
-        </div>
+
 
         {/* Points Pill (only for Student) */}
         {role === "STUDENT" && (
@@ -124,7 +116,7 @@ export default function TopNav({
                           try {
                             if (!read && markAsRead)
                               await markAsRead(notif._id);
-                          } catch (e) {}
+                          } catch (e) { }
                         }}
                         className={`p-4 flex gap-3 hover:bg-slate-50 transition relative ${!read ? "bg-blue-50/20" : ""}`}
                       >

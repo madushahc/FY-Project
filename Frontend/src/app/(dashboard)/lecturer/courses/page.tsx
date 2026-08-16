@@ -85,11 +85,11 @@ export default function LecturerCourseManagement() {
           const avgComp =
             courseEnrollments.length > 0
               ? Math.round(
-                  courseEnrollments.reduce(
-                    (sum: number, e: any) => sum + (e.progress || 0),
-                    0,
-                  ) / courseEnrollments.length,
-                )
+                courseEnrollments.reduce(
+                  (sum: number, e: any) => sum + (e.progress || 0),
+                  0,
+                ) / courseEnrollments.length,
+              )
               : 0;
 
           // Fetch quizzes count
@@ -97,7 +97,7 @@ export default function LecturerCourseManagement() {
           try {
             const quizRes = await api.get(`/quizzes/course/${course._id}`);
             quizCount = quizRes.data?.length || 0;
-          } catch (e) {}
+          } catch (e) { }
 
           // Fetch assignments count
           let assignCount = 0;
@@ -106,14 +106,14 @@ export default function LecturerCourseManagement() {
               `/assignments/course/${course._id}`,
             );
             assignCount = assignRes.data?.length || 0;
-          } catch (e) {}
+          } catch (e) { }
 
           // Fetch discussions count
           let postCount = 0;
           try {
             const forumRes = await api.get(`/forums/course/${course._id}`);
             postCount = forumRes.data?.length || 0;
-          } catch (e) {}
+          } catch (e) { }
 
           statsMap[course._id] = {
             quizzesCount: quizCount,
@@ -146,11 +146,11 @@ export default function LecturerCourseManagement() {
   const avgCompletion =
     Object.values(courseStats).length > 0
       ? Math.round(
-          Object.values(courseStats).reduce(
-            (acc, curr) => acc + curr.completionRate,
-            0,
-          ) / Object.values(courseStats).length,
-        )
+        Object.values(courseStats).reduce(
+          (acc, curr) => acc + curr.completionRate,
+          0,
+        ) / Object.values(courseStats).length,
+      )
       : 0;
 
   return (
@@ -259,11 +259,10 @@ export default function LecturerCourseManagement() {
                         </p>
                         <div className="flex items-center gap-2">
                           <span
-                            className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                              course.status === "Published"
+                            className={`px-2.5 py-1 rounded-full text-xs font-bold ${course.status === "Published"
                                 ? "bg-emerald-100 text-emerald-700"
                                 : "bg-orange-100 text-orange-700"
-                            }`}
+                              }`}
                           >
                             {course.status || "Draft"}
                           </span>
@@ -299,21 +298,7 @@ export default function LecturerCourseManagement() {
                     </div>
                   </div>
 
-                  {/* Progress Bar */}
-                  <div className="mb-6">
-                    <div className="flex justify-between items-center mb-2 text-sm font-medium">
-                      <span className="text-slate-500">Completion</span>
-                      <span className="text-slate-500">
-                        {statsLoading ? "..." : `${completion}%`}
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-100 outline outline-1 outline-slate-200/50 rounded-full h-2">
-                      <div
-                        className={`bg-blue-500 h-2 rounded-full`}
-                        style={{ width: `${completion}%` }}
-                      ></div>
-                    </div>
-                  </div>
+
 
                   {/* Summary Stats */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm text-slate-500 font-medium">

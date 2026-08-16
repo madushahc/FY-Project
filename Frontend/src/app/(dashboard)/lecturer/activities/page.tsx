@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCourseStore } from '@/store/useCourseStore';
 import api from '@/lib/api';
@@ -13,77 +13,124 @@ export default function LecturerActivities() {
    const [activities, setActivities] = useState<any[]>([]);
    const [loading, setLoading] = useState(true);
 
-   useEffect(() => {
-      fetchMyCreatedCourses();
-   }, []);
+   const fetchAllActivities = useCallback(async () => {
+      if (myCourses.length === 0) {
+         setLoading(false);
+         return;
+      }
 
-   useEffect(() => {
-      const fetchAllActivities = async () => {
-         if (myCourses.length === 0) {
-            setLoading(false);
-            return;
-         }
+      try {
+         let compiledFeed: any[] = [];
 
-         setLoading(true);
-         try {
-            let compiledFeed: any[] = [];
-
-            for (const course of myCourses) {
-               // 1) Fetch Quizzes
+         for (const course of myCourses) {
+            // 1) Fetch Quizzes with submission stats
+            try {
                const quizRes = await api.get(`/quizzes/course/${course._id}`);
-               const courseQuizzes = quizRes.data.map((q: any) => ({
-                  id: `quiz_${q._id}`,
-                  title: q.title,
-                  type: 'Quiz',
-                  course: course.title,
-                  points: `+${q.totalPoints || 0}`,
-                  due: q.timeLimit ? `${q.timeLimit} mins` : 'N/A', // Simple due logic for quiz
-                  subs: 'N/A', // Endpoint required to fetch sub counts
-                  status: 'Active',
-                  typeColor: 'bg-blue-50 text-blue-600',
-                  statusColor: 'bg-emerald-100/50 text-emerald-600',
-                  rawDate: q.createdAt
-               }));
+               if (Array.isArray(quizRes.data)) {
+                  const courseQuizzes = await Promise.all(quizRes.data.map(async (q: any) => {
+                     let subs = '0 (0%)';
+                     try {
+                        const statsRes = await api.get(`/quizzes/${q._id}/stats`);
+                        subs = `${statsRes.data.totalSubmissions || 0} (${statsRes.data.averageScore || 0}%)`;
+                     } catch (e) { }
 
-               // 2) Fetch Assignments
-               const assignRes = await api.get(`/assignments/course/${course._id}`);
-               const courseAssignments = await Promise.all(assignRes.data.map(async (a: any) => {
-                  let subs = '0';
-                  try {
-                     const statsRes = await api.get(`/submissions/stats/${a._id}`);
-                     subs = `${statsRes.data.totalSubmissions} (${statsRes.data.averageScore}%)`;
-                  } catch (e) { }
+                     const hasDeadline = Boolean(q.deadline);
+                     const isPastDue = hasDeadline && new Date(q.deadline) < new Date();
 
-                  return {
-                     id: `assn_${a._id}`,
-                     title: a.title,
-                     type: 'Assignment',
-                     course: course.title,
-                     points: `+${a.totalPoints || 0}`,
-                     due: new Date(a.deadline).toLocaleDateString(),
-                     subs: subs, // Dynamic subs and avg score
-                     status: new Date(a.deadline) > new Date() ? 'Active' : 'Past Due',
-                     typeColor: 'bg-orange-50 text-orange-600',
-                     statusColor: new Date(a.deadline) > new Date() ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600',
-                     rawDate: a.createdAt
-                  };
-               }));
-
-               compiledFeed = [...compiledFeed, ...courseQuizzes, ...courseAssignments];
+                     return {
+                        id: `quiz_${q._id}`,
+                        title: q.title,
+                        type: 'Quiz',
+                        course: course.title,
+                        points: `+${q.totalPoints || 0}`,
+                        due: hasDeadline
+                           ? new Date(q.deadline).toLocaleDateString()
+                           : (q.timeLimit ? `${q.timeLimit} mins` : 'No Deadline'),
+                        subs,
+                        status: isPastDue ? 'Past Due' : 'Active',
+                        typeColor: 'bg-blue-50 text-blue-600',
+                        statusColor: isPastDue ? 'bg-red-50 text-red-600' : 'bg-emerald-100/50 text-emerald-600',
+                        difficultyLevel: q.difficultyLevel || 'Medium',
+                        isFinalQuiz: Boolean(q.isFinalQuiz),
+                        rawDate: q.createdAt
+                     };
+                  }));
+                  compiledFeed = [...compiledFeed, ...courseQuizzes];
+               }
+            } catch (err) {
+               console.error(`Failed to fetch quizzes for course ${course._id}`, err);
             }
 
-            // Sort newest to oldest
-            compiledFeed.sort((a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime());
+            // 2) Fetch Assignments with submission stats
+            try {
+               const assignRes = await api.get(`/assignments/course/${course._id}`);
+               if (Array.isArray(assignRes.data)) {
+                  const courseAssignments = await Promise.all(assignRes.data.map(async (a: any) => {
+                     let subs = '0 (0%)';
+                     try {
+                        const statsRes = await api.get(`/submissions/stats/${a._id}`);
+                        subs = `${statsRes.data.totalSubmissions || 0} (${statsRes.data.averageScore || 0}%)`;
+                     } catch (e) { }
 
-            setActivities(compiledFeed);
-         } catch (error) {
-            console.error("Failed to load aggregated activities", error);
+                     const isPastDue = a.deadline ? new Date(a.deadline) < new Date() : false;
+
+                     return {
+                        id: `assn_${a._id}`,
+                        title: a.title,
+                        type: 'Assignment',
+                        course: course.title,
+                        points: `+${a.totalPoints || 0}`,
+                        due: a.deadline ? new Date(a.deadline).toLocaleDateString() : 'No Deadline',
+                        subs,
+                        status: isPastDue ? 'Past Due' : 'Active',
+                        typeColor: 'bg-orange-50 text-orange-600',
+                        statusColor: isPastDue ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600',
+                        rawDate: a.createdAt
+                     };
+                  }));
+                  compiledFeed = [...compiledFeed, ...courseAssignments];
+               }
+            } catch (err) {
+               console.error(`Failed to fetch assignments for course ${course._id}`, err);
+            }
          }
+
+         // Sort newest to oldest
+         compiledFeed.sort((a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime());
+
+         setActivities(compiledFeed);
+      } catch (error) {
+         console.error("Failed to load aggregated activities", error);
+      } finally {
          setLoading(false);
+      }
+   }, [myCourses]);
+
+   useEffect(() => {
+      fetchMyCreatedCourses();
+   }, [fetchMyCreatedCourses]);
+
+   useEffect(() => {
+      fetchAllActivities();
+
+      const handleFocus = () => {
+         fetchMyCreatedCourses();
+         fetchAllActivities();
       };
 
-      fetchAllActivities();
-   }, [myCourses]);
+      const intervalId = setInterval(() => {
+         fetchAllActivities();
+      }, 5000);
+
+      window.addEventListener("focus", handleFocus);
+      document.addEventListener("visibilitychange", handleFocus);
+
+      return () => {
+         window.removeEventListener("focus", handleFocus);
+         document.removeEventListener("visibilitychange", handleFocus);
+         clearInterval(intervalId);
+      };
+   }, [myCourses, fetchAllActivities, fetchMyCreatedCourses]);
 
    return (
       <div className="space-y-6 max-w-7xl mx-auto pb-20">
@@ -125,13 +172,14 @@ export default function LecturerActivities() {
                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Submissions (Total)</p>
                <h3 className="text-3xl font-light text-blue-600 mb-1">
                   {activities.reduce((acc, a) => {
-                     if (a.type === 'Assignment' && a.subs && a.subs !== 'N/A') {
-                        return acc + parseInt(a.subs.split(' ')[0]);
+                     if (a.subs && a.subs !== 'N/A') {
+                        const count = parseInt(a.subs.split(' ')[0]);
+                        return acc + (isNaN(count) ? 0 : count);
                      }
                      return acc;
                   }, 0)}
                </h3>
-               <p className="text-blue-500 text-xs font-semibold">assignments submitted</p>
+               <p className="text-blue-500 text-xs font-semibold">total attempts & submissions</p>
             </div>
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Avg Score</p>
@@ -140,7 +188,7 @@ export default function LecturerActivities() {
                      let totalAvg = 0;
                      let count = 0;
                      activities.forEach(a => {
-                        if (a.type === 'Assignment' && a.subs && a.subs !== 'N/A') {
+                        if (a.subs && a.subs !== 'N/A') {
                            const match = a.subs.match(/\((\d+)%\)/);
                            if (match) {
                               totalAvg += parseInt(match[1]);
@@ -151,7 +199,7 @@ export default function LecturerActivities() {
                      return count > 0 ? `${Math.round(totalAvg / count)}%` : '--%';
                   })()}
                </h3>
-               <p className="text-emerald-500 text-xs font-semibold">across all assignments</p>
+               <p className="text-emerald-500 text-xs font-semibold">across all activities</p>
             </div>
          </div>
 
@@ -181,12 +229,32 @@ export default function LecturerActivities() {
                      {activities.map((activity) => (
                         <tr key={activity.id} className="hover:bg-slate-50 transition-colors cursor-default">
                            <td className="py-5 pl-6 pr-4">
-                              <p className="text-sm font-bold text-slate-800">{activity.title}</p>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                 <p className="text-sm font-bold text-slate-800">{activity.title}</p>
+                                 {activity.isFinalQuiz && (
+                                    <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-md bg-purple-100 text-purple-700 border border-purple-200">
+                                       🎓 Adaptive Final
+                                    </span>
+                                 )}
+                              </div>
                            </td>
                            <td className="py-5 px-4 text-center">
-                              <span className={`px-3 py-1 text-[10px] font-bold rounded-full ${activity.typeColor}`}>
-                                 {activity.type}
-                              </span>
+                              <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                 <span className={`px-3 py-1 text-[10px] font-bold rounded-full ${activity.typeColor}`}>
+                                    {activity.type}
+                                 </span>
+                                 {activity.type === 'Quiz' && (
+                                    <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full border ${
+                                       activity.difficultyLevel === 'Easy'
+                                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                          : activity.difficultyLevel === 'Hard'
+                                          ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                                    }`}>
+                                       {activity.difficultyLevel === 'Easy' ? '🌱 Easy' : activity.difficultyLevel === 'Hard' ? '🔥 Hard' : '⚡ Medium'}
+                                    </span>
+                                 )}
+                              </div>
                            </td>
                            <td className="py-5 px-4 text-sm text-slate-500 font-medium whitespace-nowrap">
                               {activity.course}

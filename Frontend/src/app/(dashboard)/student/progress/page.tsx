@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from 'react';
 
@@ -61,7 +61,7 @@ export default function MyProgress() {
   ];
 
   const totalCourses = myEnrollments.length;
-  const avgCompletion = totalCourses > 0 ? Math.round(myEnrollments.reduce((acc, e) => acc + (e.progress || 0), 0) / totalCourses) : 0;
+  const avgCompletion = totalCourses > 0 ? Math.min(100, Math.round(myEnrollments.reduce((acc, e) => acc + Math.min(100, Math.max(0, e.progress || 0)), 0) / totalCourses)) : 0;
   const totalCompletedLessons = myEnrollments.reduce((acc, e) => acc + ((e as any).completedLessons?.length || 0), 0);
   
   const currentLevel = Math.floor((user?.points || 0) / 200) + 1;
@@ -115,10 +115,11 @@ export default function MyProgress() {
                ) : (
                  myEnrollments.slice(0, 5).map((enrollment, index) => {
                    const colorObj = courseColors[index % courseColors.length];
+                   const safeProgress = Math.min(100, Math.max(0, enrollment.progress || 0));
                    return (
                      <DonutChart 
                        key={enrollment._id} 
-                       percentage={enrollment.progress || 0} 
+                       percentage={safeProgress} 
                        color={colorObj.text} 
                        label={enrollment.course.title.substring(0, 15) + "..."} 
                        subLabel="Progress" 
@@ -149,7 +150,7 @@ export default function MyProgress() {
             ) : (
               myEnrollments.map((enrollment, index) => {
                  const courseData = enrollment.course || {};
-                 const progress = enrollment.progress || 0;
+                 const progress = Math.min(100, Math.max(0, enrollment.progress || 0));
                  const colorObj = courseColors[index % courseColors.length];
                  return (
                  <div key={enrollment._id || index} className="flex items-center gap-6">

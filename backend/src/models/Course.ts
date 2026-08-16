@@ -1,13 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface IQrMarker {
-  _id?: mongoose.Types.ObjectId;
-  timestamp: number; // In seconds
-  code: string; // Unique QR code string
-  label?: string;
-  points?: number;
-}
-
 export interface IMatchingPair {
   term: string;
   definition: string;
@@ -17,11 +9,12 @@ export interface IQuestionMarker {
   _id?: mongoose.Types.ObjectId;
   timestamp: number; // In seconds (or scroll percentage for reading materials)
   questionText: string;
-  questionType?: 'mcq' | 'true-false' | 'matching';
+  questionType?: 'mcq' | 'true-false' | 'matching' | 'feedback';
   options: string[];
   correctOption: number; // For MCQ / True-False
   matchingPairs?: IMatchingPair[]; // For matching task
   explanation?: string;
+  hiddenPrompt?: string; // Invisible research prompt / AI watermark
   points?: number;
 }
 
@@ -34,7 +27,6 @@ export interface ILesson {
   refId?: mongoose.Types.ObjectId; // Reference to Quiz or Assignment if type matches
   points?: number; // Gamification points for completing this specific lesson
   description?: string;
-  qrMarkers?: IQrMarker[];
   questionMarkers?: IQuestionMarker[];
 }
 
@@ -95,19 +87,11 @@ const CourseSchema = new Schema<ICourse>({
           refId: { type: Schema.Types.ObjectId },
           points: { type: Number, default: 10 },
           description: { type: String },
-          qrMarkers: [
-            {
-              timestamp: { type: Number, required: true },
-              code: { type: String, required: true },
-              label: { type: String, default: 'Scan QR Code' },
-              points: { type: Number, default: 15 }
-            }
-          ],
           questionMarkers: [
             {
               timestamp: { type: Number, required: true },
               questionText: { type: String, required: true },
-              questionType: { type: String, enum: ['mcq', 'true-false', 'matching'], default: 'mcq' },
+              questionType: { type: String, enum: ['mcq', 'true-false', 'matching', 'feedback'], default: 'mcq' },
               options: [{ type: String }],
               correctOption: { type: Number, default: 0 },
               matchingPairs: [
@@ -117,6 +101,7 @@ const CourseSchema = new Schema<ICourse>({
                 }
               ],
               explanation: { type: String, default: '' },
+              hiddenPrompt: { type: String, default: '' },
               points: { type: Number, default: 20 }
             }
           ]
