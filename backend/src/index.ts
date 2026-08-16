@@ -9,8 +9,12 @@ import { swaggerSpec } from './config/swagger.js';
 // Load env variables
 dotenv.config();
 
+import { seedDefaultBadges } from './controllers/gamificationController.js';
+
 // Connect to database
-connectDB();
+connectDB().then(() => {
+  seedDefaultBadges();
+});
 
 const app = express();
 

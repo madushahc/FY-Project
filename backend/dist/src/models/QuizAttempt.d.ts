@@ -9,6 +9,24 @@ export interface IQuizAttempt extends Document {
         studentAnswer: string;
         isCorrect: boolean;
     }[];
+    startedAt?: Date;
+    durationSeconds?: number;
+    answersSaved: {
+        questionId: mongoose.Types.ObjectId;
+        studentAnswer: string;
+        savedAt: Date;
+    }[];
+    xpEarned?: number;
+    isTimedOut?: boolean;
+    status?: string;
+    analytics?: {
+        attemptNumber?: number;
+        totalDurationMs?: number;
+        timePerQuestion: {
+            questionId: mongoose.Types.ObjectId;
+            timeMs: number;
+        }[];
+    };
     passed: boolean;
     attemptedAt: Date;
 }

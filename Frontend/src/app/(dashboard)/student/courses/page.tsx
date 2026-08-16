@@ -28,6 +28,8 @@ export default function MyCourses() {
     const checkpointQuestions = c.modules?.reduce((sum: number, m: any) => sum + (m.lessons?.reduce((qSum: number, l: any) => qSum + (l.questionMarkers?.length || 0), 0) || 0), 0) || 0;
     const totalQuizzes = quizLessons + checkpointQuestions;
 
+    const safeProgress = Math.min(100, Math.max(0, e.progress || 0));
+
     return {
       id: c._id || (c as any),
       title: c.title || 'Unknown Course',
@@ -37,11 +39,11 @@ export default function MyCourses() {
       lessons: allLessons,
       quizzes: totalQuizzes,
       students: c.enrollmentCount || 0,
-      progress: e.progress || 0,
+      progress: safeProgress,
       emoji: '📚',
       thumbnailUrl: c.thumbnailUrl,
       colorType: colors[index % colors.length],
-      status: e.progress === 100 ? 'completed' : 'enrolled',
+      status: safeProgress === 100 ? 'completed' : 'enrolled',
     };
   });
 

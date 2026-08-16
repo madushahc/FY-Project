@@ -35,7 +35,7 @@ export default function Login() {
       const selectedRole = String(role).toLowerCase();
 
       if (actualRole !== selectedRole) {
-        setError(`Check the correct credentials.`);
+        setError(`This account is registered as a ${response.data.role}. Please select the ${response.data.role} tab above.`);
         return;
       }
 
@@ -44,11 +44,11 @@ export default function Login() {
       localStorage.setItem("user", JSON.stringify(response.data));
 
       // Push to respective dashboard depending on returned role
-      router.push(`/${String(response.data.role || "").toLowerCase()}`);
+      router.push(`/${actualRole}`);
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
-          "Failed to sign in. Please check your credentials.",
+          "Failed to sign in. Please check your network connection and credentials.",
       );
     } finally {
       setLoading(false);

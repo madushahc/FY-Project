@@ -5,9 +5,81 @@ import { AuthRequest } from '../middleware/auth.js';
 import GamificationConfig from '../models/GamificationConfig.js';
 import { sendNotificationToUser } from "../utils/notificationService.js";
 
+export const seedDefaultBadges = async () => {
+  try {
+    const defaultBadges = [
+      {
+        name: "Bronze Medal",
+        description: "Awarded automatically when a student accumulates 100+ XP points.",
+        icon: "🥉",
+        category: "Achievement",
+        triggerEvent: "Points Reached",
+        thresholdValue: 100,
+        pointsBonus: 0,
+        isVisible: true,
+        active: true,
+      },
+      {
+        name: "Silver Medal",
+        description: "Awarded automatically when a student accumulates 500+ XP points.",
+        icon: "🥈",
+        category: "Achievement",
+        triggerEvent: "Points Reached",
+        thresholdValue: 500,
+        pointsBonus: 0,
+        isVisible: true,
+        active: true,
+      },
+      {
+        name: "Gold Medal",
+        description: "Awarded automatically when a student accumulates 1,000+ XP points.",
+        icon: "🥇",
+        category: "Achievement",
+        triggerEvent: "Points Reached",
+        thresholdValue: 1000,
+        pointsBonus: 0,
+        isVisible: true,
+        active: true,
+      },
+      {
+        name: "First Step",
+        description: "Awarded automatically when a student completes their first course.",
+        icon: "🚀",
+        category: "Academic",
+        triggerEvent: "Course Completed",
+        thresholdValue: 1,
+        pointsBonus: 0,
+        isVisible: true,
+        active: true,
+      },
+      {
+        name: "Course Master",
+        description: "Awarded automatically when a student completes 3 or more courses.",
+        icon: "🎓",
+        category: "Academic",
+        triggerEvent: "Courses Completed",
+        thresholdValue: 3,
+        pointsBonus: 0,
+        isVisible: true,
+        active: true,
+      },
+    ];
+
+    for (const b of defaultBadges) {
+      const exists = await Badge.findOne({ name: b.name });
+      if (!exists) {
+        await Badge.create(b);
+      }
+    }
+  } catch (err) {
+    console.error("Failed to seed default badges into MongoDB database:", err);
+  }
+};
+
 export const getBadges = async (req: Request, res: Response): Promise<void> => {
   try {
-    const badges = await Badge.find({ active: true });
+    await seedDefaultBadges();
+    const badges = await Badge.find();
     res.json(badges);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });

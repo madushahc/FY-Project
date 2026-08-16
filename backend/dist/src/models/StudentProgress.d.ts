@@ -1,7 +1,10 @@
 import mongoose, { Document } from 'mongoose';
 export interface IAnsweredQuestion {
     questionMarkerId: string;
+    questionText?: string | undefined;
     selectedOption?: number | undefined;
+    selectedAnswerText?: string | undefined;
+    correctAnswerText?: string | undefined;
     studentResponse?: any;
     activityType?: string | undefined;
     isCorrect: boolean;
@@ -17,10 +20,24 @@ export interface IStudentProgress extends Document {
     answeredQuestions: IAnsweredQuestion[];
     watchPercent: number;
     maxWatchedTime: number;
+    pauseCount: number;
+    rewatchCount: number;
+    totalPlayDuration: number;
     videoWatched: boolean;
     completed: boolean;
     completedAt?: Date;
     totalPointsEarned: number;
+    quizSummary?: {
+        totalQuizzesAttempted: number;
+        quizCorrectCount: number;
+        quizIncorrectCount: number;
+        totalQuizTimeTakenSecs: number;
+    };
+    assignmentSummary?: {
+        totalAssignmentsSubmitted: number;
+        gradedCount: number;
+        totalAssignmentPoints: number;
+    };
     createdAt?: Date;
     updatedAt?: Date;
 }

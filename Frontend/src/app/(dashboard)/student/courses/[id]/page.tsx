@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCourseStore } from '@/store/useCourseStore';
 import { useUserStore } from '@/store/useUserStore';
-import { ArrowLeft, Check, Play, FileText, PenTool, Link as LinkIcon, BookOpen, ExternalLink, Lock, HelpCircle, Award } from 'lucide-react';
+import { ArrowLeft, Check, Play, FileText, PenTool, Link as LinkIcon, BookOpen, ExternalLink, Lock, HelpCircle, Award, ChevronDown, ChevronRight } from 'lucide-react';
 import Loading from '@/components/ui/Loading';
 import InteractiveVideoPlayer from '@/components/InteractiveVideoPlayer';
 import InteractiveReadingPlayer from '@/components/InteractiveReadingPlayer';
@@ -20,6 +20,7 @@ export default function CoursePlayerView() {
   const [isInteractiveCompleted, setIsInteractiveCompleted] = useState<boolean>(false);
   const [sessionCompletedLessons, setSessionCompletedLessons] = useState<Set<string>>(new Set());
   const [unlockedLessons, setUnlockedLessons] = useState<Set<string>>(new Set());
+  const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set([0]));
 
   useEffect(() => {
     if (params.id) {
@@ -73,6 +74,15 @@ export default function CoursePlayerView() {
     }, 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeModuleIndex, activeLessonIndex]);
+
+  useEffect(() => {
+    setExpandedModules((prev) => {
+      if (prev.has(activeModuleIndex)) return prev;
+      const next = new Set(prev);
+      next.add(activeModuleIndex);
+      return next;
+    });
+  }, [activeModuleIndex]);
 
   if (loading && !activeCourse) {
     return <Loading />;
@@ -146,6 +156,47 @@ export default function CoursePlayerView() {
     const prevCompleted = isLessonCompleted(prevId, prevItem.mIdx, prevItem.lIdx);
 
     return !(prevUnlocked || prevCompleted);
+  };
+
+  const isModuleUnlocked = (mIdx: number) => {
+    if (mIdx === 0) return true;
+    const modLessons = modules[mIdx]?.lessons || [];
+    if (modLessons.length === 0) {
+      const prevModLessons = modules[mIdx - 1]?.lessons || [];
+      if (prevModLessons.length === 0) return isModuleUnlocked(mIdx - 1);
+      const lastLesson = prevModLessons[prevModLessons.length - 1];
+      if (!lastLesson?._id) return true;
+      return isLessonCompleted(lastLesson._id, mIdx - 1, prevModLessons.length - 1) || unlockedLessons.has(String(lastLesson._id));
+    }
+    return !isLessonLocked(mIdx, 0);
+  };
+
+  const toggleModuleExpand = (mIdx: number) => {
+    if (!isModuleUnlocked(mIdx)) {
+      alert("Module Locked 🔒: You must complete the previous module to unlock this module!");
+      return;
+    }
+    setExpandedModules((prev) => {
+      const next = new Set(prev);
+      if (next.has(mIdx)) {
+        next.delete(mIdx);
+      } else {
+        next.add(mIdx);
+      }
+      return next;
+    });
+  };
+
+  const getModuleStats = (moduleItem: any, mIdx: number) => {
+    const lesList = moduleItem.lessons || [];
+    if (lesList.length === 0) return { completed: 0, total: 0 };
+    let completedCount = 0;
+    lesList.forEach((l: any, lIdx: number) => {
+      if (l._id && isLessonCompleted(l._id, mIdx, lIdx)) {
+        completedCount++;
+      }
+    });
+    return { completed: completedCount, total: lesList.length };
   };
 
   // Gating check: Is the active lesson completed (100%) or has unlocked the next lesson (75% watched)?
@@ -287,54 +338,102 @@ export default function CoursePlayerView() {
           {modules.length === 0 ? (
             <div className="p-4 text-center text-sm text-slate-500">No modules in this course yet.</div>
           ) : (
-            modules.map((moduleItem, mIdx) => (
-              <div key={moduleItem._id || mIdx} className="space-y-1">
-                <div className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  {moduleItem.title}
-                </div>
-                {moduleItem.lessons?.map((lesson: any, lIdx: number) => {
-                  const isActive = mIdx === activeModuleIndex && lIdx === activeLessonIndex;
-                  const isCompleted = completedLessons.includes(lesson._id);
-                  const isLocked = isLessonLocked(mIdx, lIdx);
+            modules.map((moduleItem, mIdx) => {
+              const isUnlocked = isModuleUnlocked(mIdx);
+              const isExpanded = expandedModules.has(mIdx);
+              const { completed: modCompletedCount, total: modTotalCount } = getModuleStats(moduleItem, mIdx);
+              const isAllModuleCompleted = modTotalCount > 0 && modCompletedCount === modTotalCount;
 
-                  return (
-                    <div
-                      key={lesson._id || lIdx}
-                      onClick={() => handleLessonSelect(mIdx, lIdx)}
-                      className={`p-3 rounded-xl flex items-center justify-between transition-colors ${isLocked
-                        ? 'opacity-50 cursor-not-allowed bg-slate-50'
-                        : isActive
-                          ? 'bg-blue-50/50 cursor-pointer'
-                          : isCompleted
-                            ? 'hover:bg-slate-50 opacity-80 cursor-pointer'
-                            : 'hover:bg-slate-50 cursor-pointer'
-                        }`}
-                    >
-                      <div className="flex items-center gap-3 w-full">
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 shadow-sm ${isCompleted
-                          ? 'bg-emerald-500 shadow-emerald-500/30'
-                          : isLocked
-                            ? 'bg-slate-200 text-slate-400'
-                            : isActive
-                              ? 'bg-blue-600 text-white shadow-blue-500/30'
-                              : 'bg-slate-100 text-slate-500 border border-slate-200'
-                          }`}>
-                          {getLessonIcon(lesson.type, isCompleted, isLocked)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className={`text-sm font-medium truncate ${isActive ? 'text-blue-700' : 'text-slate-700'}`}>
-                            {lesson.title}
-                          </h4>
-                          <p className="text-xs text-slate-400 font-medium mt-0.5 flex items-center gap-2">
-                            <span>{getLessonMeta(lesson.type)}</span>
-                          </p>
-                        </div>
-                      </div>
+              return (
+                <div key={moduleItem._id || mIdx} className="border border-slate-200/80 rounded-xl overflow-hidden bg-white shadow-2xs">
+                  {/* Module Header / Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => toggleModuleExpand(mIdx)}
+                    className={`w-full px-3.5 py-2.5 flex items-center justify-between transition-colors text-left select-none ${!isUnlocked
+                        ? 'bg-slate-50 cursor-not-allowed text-slate-400'
+                        : mIdx === activeModuleIndex
+                          ? 'bg-blue-50/70 text-blue-900 font-bold'
+                          : 'hover:bg-slate-50 text-slate-700 font-bold'
+                      }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      {!isUnlocked ? (
+                        <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      ) : isExpanded ? (
+                        <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
+                      )}
+                      <span className="text-xs uppercase tracking-wider truncate">
+                        {moduleItem.title}
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
-            ))
+
+                    {/* Module Badge / Stats */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {modTotalCount > 0 && (
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${isAllModuleCompleted
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : !isUnlocked
+                              ? 'bg-slate-200/60 text-slate-400'
+                              : 'bg-slate-100 text-slate-500'
+                          }`}>
+                          {modCompletedCount}/{modTotalCount}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Module Lessons Container */}
+                  {isExpanded && isUnlocked && (
+                    <div className="p-1.5 space-y-1 bg-slate-50/40 border-t border-slate-100">
+                      {moduleItem.lessons?.map((lesson: any, lIdx: number) => {
+                        const isActive = mIdx === activeModuleIndex && lIdx === activeLessonIndex;
+                        const isCompleted = isLessonCompleted(lesson._id, mIdx, lIdx);
+                        const isLocked = isLessonLocked(mIdx, lIdx);
+
+                        return (
+                          <div
+                            key={lesson._id || lIdx}
+                            onClick={() => handleLessonSelect(mIdx, lIdx)}
+                            className={`p-2.5 rounded-xl flex items-center justify-between transition-colors ${isLocked
+                                ? 'opacity-50 cursor-not-allowed bg-slate-50'
+                                : isActive
+                                  ? 'bg-blue-50/80 cursor-pointer text-blue-900 border border-blue-200/60'
+                                  : isCompleted
+                                    ? 'hover:bg-slate-100 bg-white opacity-90 cursor-pointer border border-transparent'
+                                    : 'hover:bg-slate-100 bg-white cursor-pointer border border-transparent'
+                              }`}
+                          >
+                            <div className="flex items-center gap-3 w-full min-w-0">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 shadow-xs ${isCompleted
+                                  ? 'bg-emerald-500 text-white shadow-emerald-500/30'
+                                  : isLocked
+                                    ? 'bg-slate-200 text-slate-400'
+                                    : isActive
+                                      ? 'bg-blue-600 text-white shadow-blue-500/30'
+                                      : 'bg-slate-100 text-slate-500 border border-slate-200'
+                                }`}>
+                                {getLessonIcon(lesson.type, isCompleted, isLocked)}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h4 className={`text-xs font-semibold truncate ${isActive ? 'text-blue-700' : 'text-slate-700'}`}>
+                                  {lesson.title}
+                                </h4>
+                                <p className="text-[10px] text-slate-400 font-medium mt-0.5 flex items-center gap-2">
+                                  <span>{getLessonMeta(lesson.type)}</span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </div>
@@ -350,7 +449,7 @@ export default function CoursePlayerView() {
                 {activeModule.title}
               </div>
             )}
-            {completedLessons.includes(activeLesson?._id) && (
+            {activeLesson?._id && isLessonCompleted(activeLesson._id, activeModuleIndex, activeLessonIndex) && (
               <div className="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full mb-2">
                 Completed
               </div>

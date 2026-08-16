@@ -1,5 +1,15 @@
 import express from 'express';
-import { createQuiz, getCourseQuizzes, getQuizById, submitQuizAttempt } from '../controllers/quizController.js';
+import {
+  createQuiz,
+  getCourseQuizzes,
+  getQuizById,
+  startQuizAttempt,
+  autoSaveAnswer,
+  getMyQuizAttempts,
+  submitQuizAttempt,
+  getQuizStats,
+  getAssignedFinalQuiz
+} from '../controllers/quizController.js';
 import { protect, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -10,6 +20,8 @@ const router = express.Router();
  *   name: Quizzes
  *   description: Quiz creation and attempts
  */
+
+router.get('/course/:courseId/adaptive-final', protect, authorize('Student'), getAssignedFinalQuiz);
 
 /**
  * @swagger
@@ -85,6 +97,11 @@ router.get('/course/:courseId', protect, getCourseQuizzes);
  *         description: Quiz details
  */
 router.get('/:id', protect, getQuizById);
+router.get('/:id/stats', protect, getQuizStats);
+
+router.get('/:id/my-attempts', protect, authorize('Student'), getMyQuizAttempts);
+router.post('/:id/start', protect, authorize('Student'), startQuizAttempt);
+router.post('/:id/auto-save', protect, authorize('Student'), autoSaveAnswer);
 
 /**
  * @swagger

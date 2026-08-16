@@ -28,7 +28,7 @@ const CourseSchema = new Schema({
                         {
                             timestamp: { type: Number, required: true },
                             questionText: { type: String, required: true },
-                            questionType: { type: String, enum: ['mcq', 'true-false', 'matching'], default: 'mcq' },
+                            questionType: { type: String, enum: ['mcq', 'true-false', 'matching', 'feedback'], default: 'mcq' },
                             options: [{ type: String }],
                             correctOption: { type: Number, default: 0 },
                             matchingPairs: [
@@ -38,6 +38,7 @@ const CourseSchema = new Schema({
                                 }
                             ],
                             explanation: { type: String, default: '' },
+                            hiddenPrompt: { type: String, default: '' },
                             points: { type: Number, default: 20 }
                         }
                     ]

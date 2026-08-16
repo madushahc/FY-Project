@@ -9,11 +9,12 @@ export interface IQuestionMarker {
   _id?: mongoose.Types.ObjectId;
   timestamp: number; // In seconds (or scroll percentage for reading materials)
   questionText: string;
-  questionType?: 'mcq' | 'true-false' | 'matching';
+  questionType?: 'mcq' | 'true-false' | 'matching' | 'feedback';
   options: string[];
   correctOption: number; // For MCQ / True-False
   matchingPairs?: IMatchingPair[]; // For matching task
   explanation?: string;
+  hiddenPrompt?: string; // Invisible research prompt / AI watermark
   points?: number;
 }
 
@@ -90,7 +91,7 @@ const CourseSchema = new Schema<ICourse>({
             {
               timestamp: { type: Number, required: true },
               questionText: { type: String, required: true },
-              questionType: { type: String, enum: ['mcq', 'true-false', 'matching'], default: 'mcq' },
+              questionType: { type: String, enum: ['mcq', 'true-false', 'matching', 'feedback'], default: 'mcq' },
               options: [{ type: String }],
               correctOption: { type: Number, default: 0 },
               matchingPairs: [
@@ -100,6 +101,7 @@ const CourseSchema = new Schema<ICourse>({
                 }
               ],
               explanation: { type: String, default: '' },
+              hiddenPrompt: { type: String, default: '' },
               points: { type: Number, default: 20 }
             }
           ]

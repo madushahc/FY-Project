@@ -141,16 +141,23 @@ export function CourseCard({ course }: { course: CourseData }) {
         <div className="flex items-center justify-between mb-4">
           {course.progress !== undefined ? (
             <div className="w-full">
-              <div className="flex justify-between items-center mb-1 text-xs font-bold">
-                <span className="text-slate-500">Progress</span>
-                <span className={scheme.text}>{course.progress}%</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2">
-                <div
-                  className={`${scheme.bar} h-2 rounded-full`}
-                  style={{ width: `${course.progress}%` }}
-                ></div>
-              </div>
+              {(() => {
+                const safeProgress = Math.min(100, Math.max(0, course.progress));
+                return (
+                  <>
+                    <div className="flex justify-between items-center mb-1 text-xs font-bold">
+                      <span className="text-slate-500">Progress</span>
+                      <span className={scheme.text}>{safeProgress}%</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-2">
+                      <div
+                        className={`${scheme.bar} h-2 rounded-full`}
+                        style={{ width: `${safeProgress}%` }}
+                      ></div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           ) : (
             <>

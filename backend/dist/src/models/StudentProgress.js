@@ -6,7 +6,10 @@ const StudentProgressSchema = new Schema({
     answeredQuestions: [
         {
             questionMarkerId: { type: String, required: true },
+            questionText: { type: String },
             selectedOption: { type: Number },
+            selectedAnswerText: { type: String },
+            correctAnswerText: { type: String },
             studentResponse: { type: Schema.Types.Mixed },
             activityType: { type: String, default: 'mcq' },
             isCorrect: { type: Boolean, required: true },
@@ -18,10 +21,24 @@ const StudentProgressSchema = new Schema({
     ],
     watchPercent: { type: Number, default: 0 },
     maxWatchedTime: { type: Number, default: 0 },
+    pauseCount: { type: Number, default: 0 },
+    rewatchCount: { type: Number, default: 0 },
+    totalPlayDuration: { type: Number, default: 0 },
     videoWatched: { type: Boolean, default: false },
     completed: { type: Boolean, default: false },
     completedAt: { type: Date },
-    totalPointsEarned: { type: Number, default: 0 }
+    totalPointsEarned: { type: Number, default: 0 },
+    quizSummary: {
+        totalQuizzesAttempted: { type: Number, default: 0 },
+        quizCorrectCount: { type: Number, default: 0 },
+        quizIncorrectCount: { type: Number, default: 0 },
+        totalQuizTimeTakenSecs: { type: Number, default: 0 }
+    },
+    assignmentSummary: {
+        totalAssignmentsSubmitted: { type: Number, default: 0 },
+        gradedCount: { type: Number, default: 0 },
+        totalAssignmentPoints: { type: Number, default: 0 }
+    }
 }, {
     timestamps: true
 });

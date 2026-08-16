@@ -7,11 +7,12 @@ export interface IQuestionMarker {
     _id?: mongoose.Types.ObjectId;
     timestamp: number;
     questionText: string;
-    questionType?: 'mcq' | 'true-false' | 'matching';
+    questionType?: 'mcq' | 'true-false' | 'matching' | 'feedback';
     options: string[];
     correctOption: number;
     matchingPairs?: IMatchingPair[];
     explanation?: string;
+    hiddenPrompt?: string;
     points?: number;
 }
 export interface ILesson {

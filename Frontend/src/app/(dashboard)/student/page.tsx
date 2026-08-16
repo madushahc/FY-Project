@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useCourseStore } from "@/store/useCourseStore";
 import { useUserStore } from "@/store/useUserStore";
@@ -16,12 +16,36 @@ export default function StudentDashboard() {
   const { user, fetchUserProfile, badges, fetchGamification } = useUserStore();
   const { leaderboard, fetchLeaderboard } = useGamificationStore();
 
-  useEffect(() => {
+  const refreshAllData = useCallback(() => {
     fetchUserProfile();
     fetchMyEnrollments();
     fetchGamification();
     fetchLeaderboard();
-  }, []);
+  }, [fetchUserProfile, fetchMyEnrollments, fetchGamification, fetchLeaderboard]);
+
+  useEffect(() => {
+    // 1. Initial fetch on mount
+    refreshAllData();
+
+    // 2. Real-time refetch when returning to window tab
+    const handleFocus = () => {
+      refreshAllData();
+    };
+
+    // 3. Automated real-time polling interval (every 4 seconds)
+    const intervalId = setInterval(() => {
+      refreshAllData();
+    }, 4000);
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleFocus);
+      clearInterval(intervalId);
+    };
+  }, [refreshAllData]);
 
   // Filter valid enrollments (where course still exists)
   const validEnrollments = myEnrollments.filter(
@@ -36,7 +60,7 @@ export default function StudentDashboard() {
     (e) => (e.progress || 0) === 100
   ).length;
 
-  const points = user?.points || 0;
+  const points = Math.max(0, Number(user?.points) || 0);
   const badgesEarned = Array.isArray(user?.badges)
     ? user.badges.length
     : badges?.length || 0;
@@ -52,14 +76,14 @@ export default function StudentDashboard() {
       ? `#${leaderboard.length}+`
       : "#--";
 
-  // Real Level & XP Progress calculation
+  // Real Level & XP Progress calculation (250 XP per Level)
   const levelXP = 250;
   const currentLevel = Math.floor(points / levelXP) + 1;
   const currentLevelXP = points % levelXP;
-  const levelProgressPercent = Math.min(
-    Math.round((currentLevelXP / levelXP) * 100),
-    100
-  );
+  const levelProgressPercent = Math.max(
+    0,
+    Math.min(100, Math.round((currentLevelXP / levelXP) * 100))
+  ) || 0;
 
   const bgColors = [
     "bg-blue-500",
@@ -171,7 +195,7 @@ export default function StudentDashboard() {
               </Link>
             </div>
 
-            {courseLoading ? (
+            {courseLoading && validEnrollments.length === 0 ? (
               <Loading />
             ) : validEnrollments.length === 0 ? (
               <div className="text-center p-6 text-slate-500">
