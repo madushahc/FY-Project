@@ -202,7 +202,7 @@ export default function LecturerLearningAnalyticsPage() {
 
   return (
     <div className="p-6 lg:p-10 space-y-8 max-w-7xl mx-auto font-sans">
-      
+
       {/* Top Banner & Header */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 lg:p-8 text-white shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 w-96 h-96 bg-indigo-500/10 rounded-full filter blur-3xl pointer-events-none" />
@@ -247,7 +247,7 @@ export default function LecturerLearningAnalyticsPage() {
 
         {/* Hierarchical Level Selection Bar: Course -> Module -> Video -> Student -> Date Range */}
         <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 relative z-10">
-          
+
           {/* Selector 1: Course */}
           <div>
             <label className="text-[10px] uppercase tracking-wider font-extrabold text-indigo-300 mb-1.5 flex items-center gap-1.5">
@@ -435,7 +435,7 @@ export default function LecturerLearningAnalyticsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            
+
             {/* Card 1: Lowest Engagement Video */}
             <div className="p-4 bg-rose-50/70 border border-rose-200/70 rounded-2xl space-y-1">
               <span className="text-[10px] font-extrabold text-rose-600 uppercase tracking-wider block">Lowest Engagement Video</span>
@@ -486,7 +486,7 @@ export default function LecturerLearningAnalyticsPage() {
 
         {/* CHART GRID ROW 1: Trend Graph + Tier Distribution Bar/Pie */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
+
           {/* Chart 1: Daily Activity & Engagement Trend Chart */}
           <div className="lg:col-span-2 bg-slate-50/70 border border-slate-200/70 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between">
@@ -571,11 +571,10 @@ export default function LecturerLearningAnalyticsPage() {
                     <div
                       className="bg-emerald-500 h-full rounded-full transition-all duration-700"
                       style={{
-                        width: `${
-                          summary?.totalEnrolledStudents
+                        width: `${summary?.totalEnrolledStudents
                             ? ((studentCategorization.high?.count || 0) / summary.totalEnrolledStudents) * 100
                             : 0
-                        }%`,
+                          }%`,
                       }}
                     />
                   </div>
@@ -593,11 +592,10 @@ export default function LecturerLearningAnalyticsPage() {
                     <div
                       className="bg-amber-500 h-full rounded-full transition-all duration-700"
                       style={{
-                        width: `${
-                          summary?.totalEnrolledStudents
+                        width: `${summary?.totalEnrolledStudents
                             ? ((studentCategorization.medium?.count || 0) / summary.totalEnrolledStudents) * 100
                             : 0
-                        }%`,
+                          }%`,
                       }}
                     />
                   </div>
@@ -615,11 +613,10 @@ export default function LecturerLearningAnalyticsPage() {
                     <div
                       className="bg-rose-500 h-full rounded-full transition-all duration-700"
                       style={{
-                        width: `${
-                          summary?.totalEnrolledStudents
+                        width: `${summary?.totalEnrolledStudents
                             ? ((studentCategorization.low?.count || 0) / summary.totalEnrolledStudents) * 100
                             : 0
-                        }%`,
+                          }%`,
                       }}
                     />
                   </div>
@@ -636,7 +633,7 @@ export default function LecturerLearningAnalyticsPage() {
 
         {/* CHART GRID ROW 2: Question Accuracy Donut + Video Drop-off Timeline Graph */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
+
           {/* Chart 3: Question Attempt & Accuracy Analysis */}
           <div className="bg-slate-50/70 border border-slate-200/70 rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between">
@@ -719,7 +716,7 @@ export default function LecturerLearningAnalyticsPage() {
 
               {/* Video Timeline Milestones: 75%, 85%, 95%, 100% */}
               <div className="space-y-3 text-xs font-bold">
-                
+
                 {/* Milestone 1: 75% (Compulsory Completion Threshold) */}
                 <div className="space-y-1 bg-white p-3 rounded-xl border border-indigo-100 shadow-sm">
                   <div className="flex items-center justify-between text-slate-800">
@@ -827,7 +824,7 @@ export default function LecturerLearningAnalyticsPage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            
+
             <div className="bg-indigo-50/70 border border-indigo-200/70 rounded-2xl p-4 text-center">
               <span className="text-[10px] font-extrabold text-indigo-700 uppercase tracking-wider block">Average Engagement</span>
               <span className="text-2xl font-black text-indigo-900 mt-1 block">{courseLevel.avgEngagement}%</span>
@@ -905,11 +902,10 @@ export default function LecturerLearningAnalyticsPage() {
                     <td className="py-3.5 px-4 text-center font-extrabold text-emerald-600">{v.completionRate}</td>
                     <td className="py-3.5 px-4 text-center font-extrabold text-indigo-600">{v.engagementScore}</td>
                     <td className="py-3.5 px-4 text-center">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
-                        v.status === "Needs Review"
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${v.status === "Needs Review"
                           ? "bg-rose-100 text-rose-800 border border-rose-300"
                           : "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                      }`}>
+                        }`}>
                         {v.status}
                       </span>
                     </td>
@@ -988,35 +984,6 @@ export default function LecturerLearningAnalyticsPage() {
             </div>
           </div>
 
-          {/* Practical Research Case Study / Analytical Example Box */}
-          <div className="p-5 bg-gradient-to-r from-emerald-500/10 via-indigo-500/10 to-blue-500/10 border border-emerald-300 rounded-2xl space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
-                <Brain className="w-4 h-4 text-emerald-600" /> Research Case Study Benchmark Example
-              </span>
-              <span className="text-[10px] font-bold text-emerald-700 bg-white px-2.5 py-1 rounded-full border border-emerald-200">
-                Sample Student Profile: 80% Accuracy
-              </span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-              <div className="bg-white/80 p-3 rounded-xl border border-emerald-100">
-                <span className="text-[10px] text-slate-500 font-bold uppercase block">Questions Attempted</span>
-                <span className="text-lg font-black text-slate-900">10 Questions</span>
-              </div>
-              <div className="bg-white/80 p-3 rounded-xl border border-emerald-100">
-                <span className="text-[10px] text-emerald-600 font-bold uppercase block">Correct vs Incorrect</span>
-                <span className="text-lg font-black text-emerald-700">8 Correct / 2 Incorrect</span>
-              </div>
-              <div className="bg-white/80 p-3 rounded-xl border border-emerald-100">
-                <span className="text-[10px] text-blue-600 font-bold uppercase block">Accuracy Rate</span>
-                <span className="text-lg font-black text-blue-700">80% Accuracy</span>
-              </div>
-              <div className="bg-white/80 p-3 rounded-xl border border-emerald-100">
-                <span className="text-[10px] text-purple-600 font-bold uppercase block">Avg Response Time</span>
-                <span className="text-lg font-black text-purple-700">25s / question</span>
-              </div>
-            </div>
-          </div>
 
           {/* Response Breakdown Summary Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
@@ -1108,13 +1075,12 @@ export default function LecturerLearningAnalyticsPage() {
                   <div className="text-right text-xs font-bold">
                     <span className="text-emerald-600">{q.correctPct} Correct</span> / <span className="text-rose-600">{q.wrongPct} Wrong</span>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-black uppercase border ${
-                    q.difficulty === "High"
+                  <span className={`px-3 py-1 rounded-full text-xs font-black uppercase border ${q.difficulty === "High"
                       ? "bg-rose-100 text-rose-800 border-rose-300"
                       : q.difficulty === "Medium"
-                      ? "bg-amber-100 text-amber-800 border-amber-300"
-                      : "bg-emerald-100 text-emerald-800 border-emerald-300"
-                  }`}>
+                        ? "bg-amber-100 text-amber-800 border-amber-300"
+                        : "bg-emerald-100 text-emerald-800 border-emerald-300"
+                    }`}>
                     {q.difficulty} Difficulty
                   </span>
                 </div>
@@ -1195,7 +1161,7 @@ export default function LecturerLearningAnalyticsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
+
             {/* High Engagement (80% - 100%) */}
             <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-5 text-center space-y-2">
               <span className="text-xs font-extrabold text-emerald-800 uppercase tracking-wider block">
