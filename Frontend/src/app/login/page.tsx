@@ -48,7 +48,7 @@ export default function Login() {
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
-          "Failed to sign in. Please check your network connection and credentials.",
+        "Failed to sign in. Please check your network connection and credentials.",
       );
     } finally {
       setLoading(false);

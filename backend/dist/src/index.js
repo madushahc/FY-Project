@@ -15,7 +15,13 @@ connectDB().then(() => {
 const app = express();
 // Middleware
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: (origin, callback) => {
+        // Allow all origins or specify process.env.CLIENT_URL
+        callback(null, true);
+    },
+    credentials: true,
+}));
 // Basic Route
 app.get('/', (req, res) => {
     res.send('EduQuest API is running');
@@ -58,7 +64,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ message: 'Server Error', error: err.message });
 });
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 });
 //# sourceMappingURL=index.js.map

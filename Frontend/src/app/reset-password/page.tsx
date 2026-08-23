@@ -13,7 +13,7 @@ function ResetPasswordForm() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const router = useRouter();
@@ -50,7 +50,7 @@ function ResetPasswordForm() {
       );
 
       setSuccess(response.data.message || "Your password has been successfully reset.");
-      
+
       // Auto redirect to login after 3 seconds
       setTimeout(() => {
         router.push("/login");

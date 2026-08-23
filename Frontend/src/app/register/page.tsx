@@ -51,7 +51,7 @@ export default function Register() {
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
-          "Failed to create account. Please try again.",
+        "Failed to create account. Please try again.",
       );
     } finally {
       setLoading(false);

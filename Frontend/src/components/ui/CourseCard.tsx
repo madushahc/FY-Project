@@ -175,11 +175,10 @@ export function CourseCard({ course }: { course: CourseData }) {
                 .map((tag) => (
                   <span
                     key={tag}
-                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                      tag === "Core"
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${tag === "Core"
                         ? "bg-blue-50 text-blue-600"
                         : "bg-orange-50 text-orange-600"
-                    }`}
+                      }`}
                   >
                     {tag}
                   </span>
