@@ -146,8 +146,8 @@ export default function Sidebar({ role = "STUDENT" }: { role?: string }) {
                 <Link
                   href={link.href}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActiveLink(link.href)
-                      ? `bg-[#1E293B] text-white`
-                      : "text-slate-400 hover:bg-[#1E293B] hover:text-white"
+                    ? `bg-[#1E293B] text-white`
+                    : "text-slate-400 hover:bg-[#1E293B] hover:text-white"
                     }`}
                 >
                   <link.icon className="w-4 h-4" />
@@ -169,8 +169,8 @@ export default function Sidebar({ role = "STUDENT" }: { role?: string }) {
                   <Link
                     href={link.href}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActiveLink(link.href)
-                        ? "bg-[#1E293B] text-white"
-                        : "text-slate-400 hover:bg-[#1E293B] hover:text-white"
+                      ? "bg-[#1E293B] text-white"
+                      : "text-slate-400 hover:bg-[#1E293B] hover:text-white"
                       }`}
                   >
                     <link.icon className="w-4 h-4" />

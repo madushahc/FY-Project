@@ -351,10 +351,10 @@ export default function CoursePlayerView() {
                     type="button"
                     onClick={() => toggleModuleExpand(mIdx)}
                     className={`w-full px-3.5 py-2.5 flex items-center justify-between transition-colors text-left select-none ${!isUnlocked
-                        ? 'bg-slate-50 cursor-not-allowed text-slate-400'
-                        : mIdx === activeModuleIndex
-                          ? 'bg-blue-50/70 text-blue-900 font-bold'
-                          : 'hover:bg-slate-50 text-slate-700 font-bold'
+                      ? 'bg-slate-50 cursor-not-allowed text-slate-400'
+                      : mIdx === activeModuleIndex
+                        ? 'bg-blue-50/70 text-blue-900 font-bold'
+                        : 'hover:bg-slate-50 text-slate-700 font-bold'
                       }`}
                   >
                     <div className="flex items-center gap-2 min-w-0 pr-2">
@@ -374,10 +374,10 @@ export default function CoursePlayerView() {
                     <div className="flex items-center gap-1.5 shrink-0">
                       {modTotalCount > 0 && (
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${isAllModuleCompleted
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : !isUnlocked
-                              ? 'bg-slate-200/60 text-slate-400'
-                              : 'bg-slate-100 text-slate-500'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : !isUnlocked
+                            ? 'bg-slate-200/60 text-slate-400'
+                            : 'bg-slate-100 text-slate-500'
                           }`}>
                           {modCompletedCount}/{modTotalCount}
                         </span>
@@ -398,22 +398,22 @@ export default function CoursePlayerView() {
                             key={lesson._id || lIdx}
                             onClick={() => handleLessonSelect(mIdx, lIdx)}
                             className={`p-2.5 rounded-xl flex items-center justify-between transition-colors ${isLocked
-                                ? 'opacity-50 cursor-not-allowed bg-slate-50'
-                                : isActive
-                                  ? 'bg-blue-50/80 cursor-pointer text-blue-900 border border-blue-200/60'
-                                  : isCompleted
-                                    ? 'hover:bg-slate-100 bg-white opacity-90 cursor-pointer border border-transparent'
-                                    : 'hover:bg-slate-100 bg-white cursor-pointer border border-transparent'
+                              ? 'opacity-50 cursor-not-allowed bg-slate-50'
+                              : isActive
+                                ? 'bg-blue-50/80 cursor-pointer text-blue-900 border border-blue-200/60'
+                                : isCompleted
+                                  ? 'hover:bg-slate-100 bg-white opacity-90 cursor-pointer border border-transparent'
+                                  : 'hover:bg-slate-100 bg-white cursor-pointer border border-transparent'
                               }`}
                           >
                             <div className="flex items-center gap-3 w-full min-w-0">
                               <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 shadow-xs ${isCompleted
-                                  ? 'bg-emerald-500 text-white shadow-emerald-500/30'
-                                  : isLocked
-                                    ? 'bg-slate-200 text-slate-400'
-                                    : isActive
-                                      ? 'bg-blue-600 text-white shadow-blue-500/30'
-                                      : 'bg-slate-100 text-slate-500 border border-slate-200'
+                                ? 'bg-emerald-500 text-white shadow-emerald-500/30'
+                                : isLocked
+                                  ? 'bg-slate-200 text-slate-400'
+                                  : isActive
+                                    ? 'bg-blue-600 text-white shadow-blue-500/30'
+                                    : 'bg-slate-100 text-slate-500 border border-slate-200'
                                 }`}>
                                 {getLessonIcon(lesson.type, isCompleted, isLocked)}
                               </div>

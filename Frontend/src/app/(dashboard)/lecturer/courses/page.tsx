@@ -260,8 +260,8 @@ export default function LecturerCourseManagement() {
                         <div className="flex items-center gap-2">
                           <span
                             className={`px-2.5 py-1 rounded-full text-xs font-bold ${course.status === "Published"
-                                ? "bg-emerald-100 text-emerald-700"
-                                : "bg-orange-100 text-orange-700"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-orange-100 text-orange-700"
                               }`}
                           >
                             {course.status || "Draft"}

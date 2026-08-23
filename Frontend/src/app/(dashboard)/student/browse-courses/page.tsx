@@ -91,8 +91,8 @@ export default function BrowseCourses() {
               }
             }}
             className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${(activeFilter === f || (activeFilter === 'All' && f === 'All (18)'))
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-blue-600 text-white'
+              : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border border-slate-200'
               }`}
           >
             {f}
