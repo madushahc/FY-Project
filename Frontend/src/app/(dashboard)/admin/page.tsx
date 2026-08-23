@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import api from '@/lib/api';
-import { Edit2, Trash2, X, Plus, Search, Filter } from 'lucide-react';
+import { Edit2, Trash2, X, Plus, Search, Filter, BarChart2, ArrowRight, Brain } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [data, setData] = useState<any>(null);
@@ -174,12 +175,21 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <button 
-              onClick={handleOpenAdd}
-              className="bg-white hover:bg-slate-50 text-red-700 px-5 py-2.5 rounded-xl text-sm font-bold shadow transition duration-250 cursor-pointer"
-            >
-              + Quick Add User
-            </button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href="/admin/learning-analytics"
+                className="bg-white/20 hover:bg-white/30 text-white border border-white/30 px-5 py-2.5 rounded-xl text-sm font-bold shadow transition duration-250 flex items-center gap-2 cursor-pointer"
+              >
+                <BarChart2 className="w-4 h-4 text-yellow-300" />
+                <span>Learning Analytics ⭐</span>
+              </Link>
+              <button 
+                onClick={handleOpenAdd}
+                className="bg-white hover:bg-slate-50 text-red-700 px-5 py-2.5 rounded-xl text-sm font-bold shadow transition duration-250 cursor-pointer"
+              >
+                + Quick Add User
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -214,6 +224,31 @@ export default function AdminDashboard() {
             <span className="text-[10px]">▲</span> +5% this month
           </p>
         </div>
+      </div>
+
+      {/* Learning Analytics Spotlight Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 border border-indigo-500/20">
+        <div className="flex items-center gap-4">
+          <div className="bg-indigo-500/20 p-3 rounded-2xl border border-indigo-400/30">
+            <Brain className="w-8 h-8 text-indigo-400" />
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 uppercase tracking-wider mb-1">
+              ⭐ New Intelligence Tool
+            </div>
+            <h4 className="text-lg font-extrabold text-white">Hierarchical Learning Analytics</h4>
+            <p className="text-slate-300 text-xs mt-0.5">
+              Explore in-depth engagement, video watch behavior, question accuracy, at-risk student predictions, and gamification impact across all university courses.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/admin/learning-analytics"
+          className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shrink-0 cursor-pointer w-fit"
+        >
+          <span>Open Learning Analytics</span>
+          <ArrowRight className="w-4 h-4" />
+        </Link>
       </div>
 
       {/* Main Chart Area */}
