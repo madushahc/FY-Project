@@ -1,9 +1,16 @@
 [build]
   command = "npm run build"
   publish = ".next"
+  functions = "../backend/dist/functions"
 
 [build.environment]
   NODE_VERSION = "20"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/serverless/:splat"
+  status = 200
+  force = true
