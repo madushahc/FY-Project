@@ -1,4 +1,4 @@
-name: EduQuest CI/CD Pipeline - Netlify Automated Deployment
+name: Deploy EduQuest Full-Stack to Netlify
 
 on:
   push:
@@ -8,12 +8,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
-    name: Build Full-Stack & Deploy to Netlify
+  deploy-to-netlify:
+    name: Build & Deploy to Netlify
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Source Code
         uses: actions/checkout@v4
 
       - name: Setup Node.js 20
@@ -21,21 +21,21 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Backend Dependencies & Build TypeScript
+      - name: Install & Build Backend
         run: |
           cd backend
           npm ci || npm install
           npm run build
 
-      - name: Install Frontend Dependencies & Build Next.js
+      - name: Install & Build Frontend
         run: |
           cd Frontend
           npm ci || npm install
           npm run build
 
-      - name: Deploy Both Frontend & Serverless Backend to Netlify
+      - name: Deploy to Netlify Production
         run: |
-          npx netlify-cli deploy --prod --dir=Frontend/.next --functions=backend/dist/src
+          npx netlify-cli deploy --prod --dir=Frontend/.next --functions=backend/dist/src --site=${{ secrets.NETLIFY_SITE_ID }} --auth=${{ secrets.NETLIFY_AUTH_TOKEN }}
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
