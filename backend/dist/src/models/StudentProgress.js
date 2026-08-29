@@ -44,4 +44,3 @@ const StudentProgressSchema = new Schema({
 });
 StudentProgressSchema.index({ student: 1, course: 1, lessonId: 1 }, { unique: true });
 export default mongoose.model('StudentProgress', StudentProgressSchema);
-//# sourceMappingURL=StudentProgress.js.map

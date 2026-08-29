@@ -21,4 +21,3 @@ const ForumPostSchema = new Schema({
     timestamps: true,
 });
 export default mongoose.model("ForumPost", ForumPostSchema);
-//# sourceMappingURL=ForumPost.js.map

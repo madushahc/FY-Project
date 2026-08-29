@@ -39,4 +39,3 @@ const QuizAttemptSchema = new Schema({
     timestamps: true
 });
 export default mongoose.model('QuizAttempt', QuizAttemptSchema);
-//# sourceMappingURL=QuizAttempt.js.map

@@ -17,4 +17,3 @@ const AssignmentSchema = new Schema({
     timestamps: true
 });
 export default mongoose.model('Assignment', AssignmentSchema);
-//# sourceMappingURL=Assignment.js.map

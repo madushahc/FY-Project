@@ -117,4 +117,3 @@ router.post('/:id/auto-save', protect, authorize('Student'), autoSaveAnswer);
  */
 router.post('/:id/attempt', protect, authorize('Student'), submitQuizAttempt);
 export default router;
-//# sourceMappingURL=quizRoutes.js.map

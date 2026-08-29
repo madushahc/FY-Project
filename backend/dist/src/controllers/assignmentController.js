@@ -63,4 +63,3 @@ export const getAssignmentById = async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 };
-//# sourceMappingURL=assignmentController.js.map

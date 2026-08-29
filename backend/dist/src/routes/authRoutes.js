@@ -133,4 +133,3 @@ router.post('/forgot-password', forgotPassword);
  */
 router.post('/reset-password', resetPassword);
 export default router;
-//# sourceMappingURL=authRoutes.js.map

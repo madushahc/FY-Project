@@ -191,4 +191,3 @@ export const getAdminReports = async (req, res) => {
         res.status(500).json({ message: 'Error fetching analytics' });
     }
 };
-//# sourceMappingURL=analyticsController.js.map

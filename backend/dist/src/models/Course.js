@@ -58,4 +58,3 @@ const CourseSchema = new Schema({
     timestamps: true
 });
 export default mongoose.model('Course', CourseSchema);
-//# sourceMappingURL=Course.js.map

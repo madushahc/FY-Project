@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET || "secret", {
-        expiresIn: "30d",
+        expiresIn: "2h",
     });
 };
 const buildUserResponse = (user) => ({
@@ -189,4 +189,3 @@ export const resetPassword = async (req, res) => {
         });
     }
 };
-//# sourceMappingURL=authController.js.map

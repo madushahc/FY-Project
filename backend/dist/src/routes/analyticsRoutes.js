@@ -8,4 +8,3 @@ router.get('/engagement', protect, authorize('Admin', 'Lecturer'), getInteractiv
 router.get('/research-export', protect, authorize('Admin', 'Lecturer'), exportResearchData);
 router.get('/raw-events-export', protect, authorize('Admin', 'Lecturer'), exportRawEventsData);
 export default router;
-//# sourceMappingURL=analyticsRoutes.js.map
