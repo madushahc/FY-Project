@@ -1,6 +1,7 @@
 import Enrollment from "../models/Enrollment.js";
 import StudentProgress from "../models/StudentProgress.js";
 import Badge from "../models/Badge.js";
+import LearningActivity from "../models/LearningActivity.js";
 import { sendNotificationToUser } from "./notificationService.js";
 export async function checkAndAwardBadges(user) {
     if (!user || user.role !== "Student")
@@ -112,6 +113,16 @@ export async function checkAndAwardBadges(user) {
     if (newBadges.length > 0) {
         user.badges = [...currentBadges, ...newBadges];
         await user.save();
+        for (const bName of newBadges) {
+            await LearningActivity.create({
+                student: user._id,
+                activityType: 'badge_awarded',
+                title: `Badge Awarded: ${bName}`,
+                details: `Unlocked badge: ${bName}`,
+                metadata: { badgeName: bName },
+                timestamp: new Date()
+            }).catch(err => console.error("Non-fatal: Failed to log badge_awarded activity", err));
+        }
     }
 }
 //# sourceMappingURL=gamificationService.js.map

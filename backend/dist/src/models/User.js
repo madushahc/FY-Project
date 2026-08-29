@@ -29,6 +29,9 @@ const userSchema = new Schema({
     profilePhoto: { type: String, default: "" },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
+    participantCode: { type: String, default: "" },
+    isResearchParticipant: { type: Boolean, default: true },
+    isTestUser: { type: Boolean, default: false },
 }, {
     timestamps: true,
 });

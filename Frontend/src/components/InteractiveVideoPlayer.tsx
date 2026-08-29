@@ -123,6 +123,10 @@ export default function InteractiveVideoPlayer({
   const [toastMessage, setToastMessage] = useState<{ text: string; points: number } | null>(null);
 
   const lastReportedPercentRef = useRef<number>(0);
+  const pauseCountRef = useRef<number>(0);
+  const rewatchCountRef = useRef<number>(0);
+  const totalPlayDurationRef = useRef<number>(0);
+  const playTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Send watch progress to backend — triggers onUnlockNextLesson at >=75% and onCompletionChange at 100%
   const sendWatchProgress = useCallback(async (pct: number, timeSec: number) => {
@@ -131,7 +135,10 @@ export default function InteractiveVideoPlayer({
     try {
       const { data } = await api.post(`/courses/${courseId}/lessons/${lessonId}/watch-progress`, {
         watchPercent: pct,
-        currentTime: timeSec
+        currentTime: timeSec,
+        pauseCount: pauseCountRef.current,
+        rewatchCount: rewatchCountRef.current,
+        totalPlayDuration: totalPlayDurationRef.current
       });
       if (data.watchPercent !== undefined) setWatchPercent(data.watchPercent);
       if (data.videoWatched !== undefined) setVideoWatched(data.videoWatched);
@@ -460,18 +467,39 @@ export default function InteractiveVideoPlayer({
           className="w-full max-h-[520px] object-contain"
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
+          onPlay={() => {
+            setIsPlaying(true);
+            if (!playTimerRef.current) {
+              playTimerRef.current = setInterval(() => {
+                totalPlayDurationRef.current += 1;
+              }, 1000);
+            }
+          }}
+          onPause={() => {
+            setIsPlaying(false);
+            if (playTimerRef.current) {
+              clearInterval(playTimerRef.current);
+              playTimerRef.current = null;
+            }
+            if (!activeQuestionMarker) {
+              pauseCountRef.current += 1;
+            }
+          }}
           onSeeking={() => {
             isSeekingRef.current = true;
-            if (!videoRef.current || allowSeeking) return;
+            if (!videoRef.current) return;
             const targetTime = videoRef.current.currentTime;
-            // Strictly disable stepping / seeking forward into un-watched sections
-            if (targetTime > maxWatchedTimeRef.current + 0.3 && !isCompletedRef.current) {
-              videoRef.current.currentTime = maxWatchedTimeRef.current;
-              if (seekWarningTimerRef.current) clearTimeout(seekWarningTimerRef.current);
-              setSeekingWarning("⏩ Step forward is disabled. Please watch the lesson video continuously.");
-              seekWarningTimerRef.current = setTimeout(() => setSeekingWarning(null), 3000);
+            if (targetTime < lastContinuousTimeRef.current - 1.5) {
+              rewatchCountRef.current += 1;
+            }
+            if (!allowSeeking) {
+              // Strictly disable stepping / seeking forward into un-watched sections
+              if (targetTime > maxWatchedTimeRef.current + 0.3 && !isCompletedRef.current) {
+                videoRef.current.currentTime = maxWatchedTimeRef.current;
+                if (seekWarningTimerRef.current) clearTimeout(seekWarningTimerRef.current);
+                setSeekingWarning("⏩ Step forward is disabled. Please watch the lesson video continuously.");
+                seekWarningTimerRef.current = setTimeout(() => setSeekingWarning(null), 3000);
+              }
             }
           }}
           onSeeked={() => {

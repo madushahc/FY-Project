@@ -69,39 +69,266 @@ export default function LecturerLearningAnalyticsPage() {
   const [atRiskStudents, setAtRiskStudents] = useState<any[]>([]);
   const [availableFilters, setAvailableFilters] = useState<any>(null);
 
+  const exportResearchCsv = () => {
+    if (!studentRankings || studentRankings.length === 0) {
+      alert("No student dataset available to export.");
+      return;
+    }
+    const headers = [
+      "ParticipantCode",
+      "CourseCode",
+      "CourseName",
+      "ActiveDaysCount",
+      "TotalActiveTime (Mins)",
+      "FirstActiveDate",
+      "LastActiveDate",
+      "PauseCount",
+      "RewatchCount",
+      "LessonsAvailable",
+      "LessonsCompleted",
+      "LessonCompletionRate (%)",
+      "CheckpointQuestionsAvailable",
+      "CheckpointQuestionsAttempted",
+      "CheckpointQuestionsCorrect",
+      "CheckpointQuestionsIncorrect",
+      "CheckpointAccuracy (%)",
+      "AvgCheckpointResponseTime (Secs)",
+      "QuizzesAvailable",
+      "QuizAttempts",
+      "QuizzesCompleted",
+      "QuizParticipationRate (%)",
+      "AverageQuizScore (%)",
+      "FinalQuizScore (%)",
+      "PassedQuizzes",
+      "FailedQuizzes",
+      "CourseXP",
+      "PointTransactionCount",
+      "BadgeCount",
+      "BadgesEarned",
+      "LeaderboardPosition",
+      "V - Video Watch Score (%)",
+      "Q - Quiz Participation Score (%)",
+      "L - Lesson Completion Score (%)",
+      "S - System Interaction Score (%)",
+      "E - Overall Engagement Score (%)",
+      "AtRiskStatus",
+      "RiskReason",
+    ];
+
+    const sanitize = (val: any) =>
+      `"${String(val !== undefined && val !== null ? val : "").replace(/"/g, '""')}"`;
+
+    const rows = studentRankings.map((s) => {
+      const pCode = s.participantCode || `P${String(s.rank || 1).padStart(2, "0")}`;
+      const questionsAttempted = s.totalQuestionsAttempted || 0;
+      const questionsCorrect = s.totalQuestionsCorrect || 0;
+      const questionsIncorrect = Math.max(0, questionsAttempted - questionsCorrect);
+      const quizzesAttempted = s.quizzesAttemptedCount || 0;
+      const uniqueQuizzes = s.uniqueQuizzesAttempted || (quizzesAttempted > 0 ? 1 : 0);
+      const quizzesPassed = s.quizzesPassedCount || 0;
+      const quizzesFailed = s.quizzesFailedCount || Math.max(0, quizzesAttempted - quizzesPassed);
+
+      return [
+        sanitize(pCode),
+        sanitize(s.courseCode || activeCourse?.code || "CS101"),
+        sanitize(s.courseName || activeCourse?.title || "EduQuest Research Course"),
+        s.activeDaysCount || 1,
+        s.totalLearningTimeMins || 0,
+        sanitize(s.firstActiveDate ? new Date(s.firstActiveDate).toLocaleString() : "N/A"),
+        sanitize(s.lastActiveDate ? new Date(s.lastActiveDate).toLocaleString() : "N/A"),
+        s.pauseCount || 0,
+        s.rewatchCount || 0,
+        summary?.totalLessons || 14,
+        s.lessonsCompletedCount || 0,
+        s.lessonScoreL ?? s.completionRate ?? 0,
+        summary?.totalQuestionsConfigured || 17,
+        questionsAttempted,
+        questionsCorrect,
+        questionsIncorrect,
+        s.questionAccuracyRate || 0,
+        s.avgResponseTime || 0,
+        1,
+        quizzesAttempted,
+        quizzesPassed,
+        uniqueQuizzes > 0 ? 100 : 0,
+        s.averageQuizScore || 0,
+        s.finalQuizScore || 0,
+        quizzesPassed,
+        quizzesFailed,
+        s.courseXP ?? s.totalPoints ?? 0,
+        s.activityLogs ? s.activityLogs.length : 0,
+        s.badgeCount || (s.badges ? s.badges.length : 0),
+        sanitize(Array.isArray(s.badges) && s.badges.length > 0 ? s.badges.join("; ") : "None"),
+        s.leaderboardPosition ?? s.rank ?? 1,
+        s.videoScoreV ?? s.completionRate ?? 0,
+        s.quizScoreQ ?? 0,
+        s.lessonScoreL ?? s.completionRate ?? 0,
+        s.systemInteractionScoreS ?? 80,
+        s.overallEngagementScoreE ?? s.engagementScore ?? 0,
+        sanitize(s.isAtRisk ? "Yes (At-Risk)" : "No (On Track)"),
+        sanitize(s.riskReason || "N/A"),
+      ];
+    });
+
+    const csvContent =
+      "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `Student_Engagement_Research_Data_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportRawEventsCsv = () => {
+    if (!studentRankings || studentRankings.length === 0) {
+      alert("No telemetry event dataset available to export.");
+      return;
+    }
+    const headers = [
+      "ParticipantCode",
+      "CourseId",
+      "CourseCode",
+      "CourseName",
+      "LessonId",
+      "EventType",
+      "Timestamp",
+      "XPValue",
+      "MetadataJSON"
+    ];
+
+    const sanitize = (val: any) =>
+      `"${String(val !== undefined && val !== null ? val : "").replace(/"/g, '""')}"`;
+
+    const rawRows: any[] = [];
+    studentRankings.forEach((s) => {
+      const pCode = s.participantCode || `P${String(s.rank).padStart(2, "0")}`;
+      (s.activityLogs || []).forEach((act: any) => {
+        rawRows.push([
+          sanitize(pCode),
+          sanitize(s.courseId || activeCourse?.courseId || "N/A"),
+          sanitize(s.courseCode || activeCourse?.code || "CS101"),
+          sanitize(s.courseName || "EduQuest Research Course"),
+          sanitize(act.title || "Lesson Event"),
+          sanitize(act.type || "engagement_event"),
+          sanitize(act.timestamp ? new Date(act.timestamp).toISOString() : new Date().toISOString()),
+          act.xp || 0,
+          sanitize(JSON.stringify(act))
+        ]);
+      });
+    });
+
+    if (rawRows.length === 0) {
+      alert("No raw event logs found for current filter.");
+      return;
+    }
+
+    const csvContent =
+      "\uFEFF" + [headers.join(","), ...rawRows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `Student_Engagement_Raw_Events_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const exportCsv = () => {
     if (!studentRankings || studentRankings.length === 0) {
       alert("No student dataset available to export.");
       return;
     }
     const headers = [
-      "Rank",
-      "StudentName",
-      "Email",
-      "EngagementScore",
-      "CompletionRate",
-      "TotalXPEarned",
-      "QuizAccuracyRate",
+      "Leaderboard Position",
+      "Student Name",
+      "Email Address",
+      "Enrolled Course",
+      "Overall Engagement Score (%)",
+      "Watch Percentage / Completion Rate (%)",
+      "Watch Time (Mins)",
+      "Total Play Duration (Secs)",
+      "Pause Count",
+      "Rewatch Count",
+      "Lessons Completed",
+      "Lessons Engaged",
+      "Checkpoint Questions Attempted",
+      "Checkpoint Questions Correct",
+      "Question Accuracy Rate (%)",
+      "Avg Response Time (Secs)",
+      "Fast Responses (<10s)",
+      "Normal Responses (10-25s)",
+      "Slow Responses (>25s)",
+      "Points Earned (XP)",
+      "Badges Received",
+      "At-Risk Status",
+      "Risk Reason",
+      "Last Active Date",
     ];
+
+    const sanitize = (val: any) =>
+      `"${String(val !== undefined && val !== null ? val : "").replace(/"/g, '""')}"`;
+
     const rows = studentRankings.map((s) => [
       s.rank,
-      `"${s.name}"`,
-      `"${s.email}"`,
+      sanitize(s.name),
+      sanitize(s.email),
+      sanitize(s.courseName),
       s.engagementScore,
       s.completionRate,
-      s.totalPoints,
-      s.questionAccuracyRate,
+      s.totalLearningTimeMins || 0,
+      s.totalPlayDuration || 0,
+      s.pauseCount || 0,
+      s.rewatchCount || 0,
+      s.lessonsCompletedCount || 0,
+      s.totalLessonsEngaged || 0,
+      s.totalQuestionsAttempted || 0,
+      s.totalQuestionsCorrect || 0,
+      s.questionAccuracyRate || 0,
+      s.avgResponseTime || 0,
+      s.fastResponseCount || 0,
+      s.normalResponseCount || 0,
+      s.slowResponseCount || 0,
+      s.totalPoints || 0,
+      sanitize(
+        Array.isArray(s.badges) && s.badges.length > 0
+          ? s.badges.join("; ")
+          : "None"
+      ),
+      sanitize(s.isAtRisk ? "Yes (At-Risk)" : "No (On Track)"),
+      sanitize(s.riskReason || "N/A"),
+      sanitize(
+        s.lastActiveDate
+          ? new Date(s.lastActiveDate).toLocaleString()
+          : "Recently Active"
+      ),
     ]);
+
     const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
+      "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Research_Analytics_Dataset_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `Student_Behavior_Research_Analytics_${new Date().toISOString().split("T")[0]}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const fetchAnalytics = useCallback(async () => {
@@ -220,13 +447,28 @@ export default function LecturerLearningAnalyticsPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
-              onClick={exportCsv}
+              onClick={exportResearchCsv}
               className="p-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl transition flex items-center gap-2 shadow-lg cursor-pointer"
+              title="Export Anonymous Research Data (Participant Code P01, P02... stripped of PII)"
             >
               <Download className="w-4 h-4" />
-              <span>Export CSV</span>
+              <span>📥 Research Dataset CSV</span>
+            </button>
+            <button
+              onClick={exportRawEventsCsv}
+              className="p-3 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs rounded-xl transition flex items-center gap-2 shadow-lg cursor-pointer"
+              title="Export Raw Telemetry Logs & Engagement Events"
+            >
+              <Download className="w-4 h-4" />
+              <span>📄 Raw Events CSV</span>
+            </button>
+            <button
+              onClick={exportCsv}
+              className="p-3 bg-slate-800 hover:bg-slate-700 text-white font-extrabold text-xs rounded-xl transition flex items-center gap-2 shadow-lg cursor-pointer"
+            >
+              <span>📊 Standard CSV</span>
             </button>
             <button
               onClick={() => window.print()}
@@ -572,8 +814,8 @@ export default function LecturerLearningAnalyticsPage() {
                       className="bg-emerald-500 h-full rounded-full transition-all duration-700"
                       style={{
                         width: `${summary?.totalEnrolledStudents
-                            ? ((studentCategorization.high?.count || 0) / summary.totalEnrolledStudents) * 100
-                            : 0
+                          ? ((studentCategorization.high?.count || 0) / summary.totalEnrolledStudents) * 100
+                          : 0
                           }%`,
                       }}
                     />
@@ -593,8 +835,8 @@ export default function LecturerLearningAnalyticsPage() {
                       className="bg-amber-500 h-full rounded-full transition-all duration-700"
                       style={{
                         width: `${summary?.totalEnrolledStudents
-                            ? ((studentCategorization.medium?.count || 0) / summary.totalEnrolledStudents) * 100
-                            : 0
+                          ? ((studentCategorization.medium?.count || 0) / summary.totalEnrolledStudents) * 100
+                          : 0
                           }%`,
                       }}
                     />
@@ -614,8 +856,8 @@ export default function LecturerLearningAnalyticsPage() {
                       className="bg-rose-500 h-full rounded-full transition-all duration-700"
                       style={{
                         width: `${summary?.totalEnrolledStudents
-                            ? ((studentCategorization.low?.count || 0) / summary.totalEnrolledStudents) * 100
-                            : 0
+                          ? ((studentCategorization.low?.count || 0) / summary.totalEnrolledStudents) * 100
+                          : 0
                           }%`,
                       }}
                     />
@@ -903,8 +1145,8 @@ export default function LecturerLearningAnalyticsPage() {
                     <td className="py-3.5 px-4 text-center font-extrabold text-indigo-600">{v.engagementScore}</td>
                     <td className="py-3.5 px-4 text-center">
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${v.status === "Needs Review"
-                          ? "bg-rose-100 text-rose-800 border border-rose-300"
-                          : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                        ? "bg-rose-100 text-rose-800 border border-rose-300"
+                        : "bg-emerald-100 text-emerald-800 border border-emerald-300"
                         }`}>
                         {v.status}
                       </span>
@@ -1076,10 +1318,10 @@ export default function LecturerLearningAnalyticsPage() {
                     <span className="text-emerald-600">{q.correctPct} Correct</span> / <span className="text-rose-600">{q.wrongPct} Wrong</span>
                   </div>
                   <span className={`px-3 py-1 rounded-full text-xs font-black uppercase border ${q.difficulty === "High"
-                      ? "bg-rose-100 text-rose-800 border-rose-300"
-                      : q.difficulty === "Medium"
-                        ? "bg-amber-100 text-amber-800 border-amber-300"
-                        : "bg-emerald-100 text-emerald-800 border-emerald-300"
+                    ? "bg-rose-100 text-rose-800 border-rose-300"
+                    : q.difficulty === "Medium"
+                      ? "bg-amber-100 text-amber-800 border-amber-300"
+                      : "bg-emerald-100 text-emerald-800 border-emerald-300"
                     }`}>
                     {q.difficulty} Difficulty
                   </span>
