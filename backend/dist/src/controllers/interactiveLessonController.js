@@ -4,6 +4,8 @@ import User from "../models/User.js";
 import StudentProgress from "../models/StudentProgress.js";
 import Enrollment from "../models/Enrollment.js";
 import LearningActivity from "../models/LearningActivity.js";
+import QuizAttempt from "../models/QuizAttempt.js";
+import RESEARCH_CONFIG from "../config/researchConfig.js";
 // Helper to locate a lesson inside a course structure
 const findLessonInCourse = (course, lessonId) => {
     if (!course || !course.modules)
@@ -404,11 +406,11 @@ export const getInteractiveAnalytics = async (req, res) => {
             progressQuery.updatedAt = { $gte: startDate };
         }
         const allProgress = await StudentProgress.find(progressQuery)
-            .populate("student", "name email points profilePhoto")
+            .populate("student", "name email points profilePhoto badges")
             .populate("course", "title code");
         // Fetch enrollments for total student count
         const enrollments = await Enrollment.find({ course: { $in: courseIds } })
-            .populate("student", "name email profilePhoto points")
+            .populate("student", "name email profilePhoto points badges")
             .populate("course", "title code");
         // Calculate total lessons & questions configured across courses
         let totalLessonsCount = 0;
@@ -441,6 +443,9 @@ export const getInteractiveAnalytics = async (req, res) => {
                         email: sObj.email || "",
                         profilePhoto: sObj.profilePhoto,
                         courseName: e.course?.title || "Course",
+                        participantCode: sObj.participantCode || "",
+                        isResearchParticipant: sObj.isResearchParticipant !== false,
+                        isTestUser: sObj.isTestUser === true,
                         totalQuestionsAttempted: 0,
                         totalQuestionsCorrect: 0,
                         totalPoints: 0,
@@ -454,6 +459,14 @@ export const getInteractiveAnalytics = async (req, res) => {
                         fastResponseCount: 0,
                         normalResponseCount: 0,
                         slowResponseCount: 0,
+                        quizzesAttemptedCount: 0,
+                        quizzesPassedCount: 0,
+                        quizzesFailedCount: 0,
+                        quizScoreSum: 0,
+                        finalQuizScore: 0,
+                        loginCount: 0,
+                        activeDaysSet: new Set(),
+                        badges: sObj.badges || [],
                         answeredQuestionsList: [],
                         activityLogs: [],
                     };
@@ -480,6 +493,9 @@ export const getInteractiveAnalytics = async (req, res) => {
                         email: sObj.email || "",
                         profilePhoto: sObj.profilePhoto,
                         courseName: p.course?.title || "Course",
+                        participantCode: sObj.participantCode || "",
+                        isResearchParticipant: sObj.isResearchParticipant !== false,
+                        isTestUser: sObj.isTestUser === true,
                         totalQuestionsAttempted: 0,
                         totalQuestionsCorrect: 0,
                         totalPoints: 0,
@@ -493,6 +509,14 @@ export const getInteractiveAnalytics = async (req, res) => {
                         fastResponseCount: 0,
                         normalResponseCount: 0,
                         slowResponseCount: 0,
+                        quizzesAttemptedCount: 0,
+                        quizzesPassedCount: 0,
+                        quizzesFailedCount: 0,
+                        quizScoreSum: 0,
+                        finalQuizScore: 0,
+                        loginCount: 0,
+                        activeDaysSet: new Set(),
+                        badges: sObj.badges || [],
                         answeredQuestionsList: [],
                         activityLogs: [],
                     };
@@ -538,75 +562,138 @@ export const getInteractiveAnalytics = async (req, res) => {
                         xp: q.pointsEarned || (q.isCorrect ? 10 : 0),
                     });
                 });
-                if (!sp.lastActiveDate ||
-                    (p.updatedAt && new Date(p.updatedAt) > new Date(sp.lastActiveDate))) {
-                    sp.lastActiveDate = p.updatedAt ? new Date(p.updatedAt) : new Date();
+                const pDate = p.updatedAt ? new Date(p.updatedAt) : new Date();
+                const dateStr = pDate.toISOString().split("T")[0];
+                if (dateStr)
+                    sp.activeDaysSet.add(dateStr);
+                if (!sp.firstActiveDate || pDate < new Date(sp.firstActiveDate)) {
+                    sp.firstActiveDate = pDate;
+                }
+                if (!sp.lastActiveDate || pDate > new Date(sp.lastActiveDate)) {
+                    sp.lastActiveDate = pDate;
                 }
             }
         });
-        // Calculate Engagement Score & At-Risk Status for each student
-        const studentRankings = Object.values(studentPerfMap)
-            .map((sp) => {
-            const completionRate = sp.totalLessonsEngaged > 0
-                ? Math.min(100, Math.max(0, Math.round(sp.watchPercentSum / sp.totalLessonsEngaged)))
+        // Fetch Formal Quiz Attempts & Learning Activities
+        const activeStudentIds = Object.keys(studentPerfMap);
+        const allQuizAttempts = await QuizAttempt.find({ student: { $in: activeStudentIds } }).populate('quiz', 'title isFinalQuiz');
+        const allActivities = await LearningActivity.find({ student: { $in: activeStudentIds } });
+        allActivities.forEach((act) => {
+            const sId = act.student?.toString();
+            if (sId && studentPerfMap[sId]) {
+                const sp = studentPerfMap[sId];
+                if (act.activityType === 'login')
+                    sp.loginCount += 1;
+                if (act.timestamp) {
+                    const actDate = new Date(act.timestamp);
+                    const actDateStr = actDate.toISOString().split("T")[0];
+                    if (actDateStr)
+                        sp.activeDaysSet.add(actDateStr);
+                    if (!sp.firstActiveDate || actDate < new Date(sp.firstActiveDate))
+                        sp.firstActiveDate = actDate;
+                    if (!sp.lastActiveDate || actDate > new Date(sp.lastActiveDate))
+                        sp.lastActiveDate = actDate;
+                }
+            }
+        });
+        allQuizAttempts.forEach((qa) => {
+            const sId = qa.student?.toString();
+            if (sId && studentPerfMap[sId]) {
+                const sp = studentPerfMap[sId];
+                sp.quizzesAttemptedCount += 1;
+                if (qa.passed)
+                    sp.quizzesPassedCount += 1;
+                else
+                    sp.quizzesFailedCount += 1;
+                sp.quizScoreSum += qa.score || 0;
+                if (qa.quiz?.isFinalQuiz) {
+                    sp.finalQuizScore = qa.score || 0;
+                }
+            }
+        });
+        // Calculate Research Engagement Score E = 0.40V + 0.30Q + 0.20L + 0.10S
+        const rawStudentList = Object.values(studentPerfMap)
+            .map((sp, idx) => {
+            const participantCode = sp.participantCode || `P${String(idx + 1).padStart(2, '0')}`;
+            // V = Video Watch Score (0-100%)
+            const videoScoreV = sp.totalLessonsEngaged > 0
+                ? Math.min(100, Math.max(0, Math.round((sp.watchPercentSum / sp.totalLessonsEngaged) * 100) / 100))
                 : 0;
-            const questionAccuracyRate = sp.totalQuestionsAttempted > 0
-                ? Math.min(100, Math.max(0, Math.round((sp.totalQuestionsCorrect / sp.totalQuestionsAttempted) * 100)))
+            // Q = Assessment Participation Score (0-100%) - unique formal quizzes attempted
+            const totalAssessmentsConfigured = Math.max(1, totalQuestionsConfigured + (sp.quizzesAttemptedCount > 0 ? sp.quizzesAttemptedCount : 1));
+            const totalAssessmentsAttempted = sp.totalQuestionsAttempted + sp.quizzesAttemptedCount;
+            const quizScoreQ = Math.min(100, Math.round(((totalAssessmentsAttempted / totalAssessmentsConfigured) * 100) * 100) / 100);
+            // Performance & Accuracy metrics (kept separately)
+            const checkpointAccuracy = sp.totalQuestionsAttempted > 0
+                ? Math.min(100, Math.max(0, Math.round((sp.totalQuestionsCorrect / sp.totalQuestionsAttempted) * 10000) / 100))
                 : 0;
-            const participationRate = totalQuestionsConfigured > 0
-                ? Math.min(100, Math.max(0, Math.round((sp.totalQuestionsAttempted / totalQuestionsConfigured) * 100)))
-                : sp.totalQuestionsAttempted > 0
-                    ? 80
-                    : 0;
-            // Engagement Score Formula (0-100) exact weighted formula:
-            // 40% Video Completion + 25% Question Participation + 20% Answer Accuracy + 15% Learning Behavior & Points
-            const videoCompletionComponent = completionRate * 0.40;
-            const questionParticipationComponent = participationRate * 0.25;
-            const answerAccuracyComponent = questionAccuracyRate * 0.20;
-            const learningBehaviorScore = Math.min(100, (sp.totalLessonsEngaged > 0 ? 80 : 0) + (sp.totalTimeTaken > 0 ? 20 : 0));
-            const learningBehaviorComponent = learningBehaviorScore * 0.10;
-            const gamificationScore = Math.min(100, sp.totalPoints > 0 ? 100 : 0);
-            const gamificationActivityComponent = gamificationScore * 0.05;
-            const engagementScore = Math.min(100, Math.max(0, Math.round(videoCompletionComponent +
-                questionParticipationComponent +
-                answerAccuracyComponent +
-                learningBehaviorComponent +
-                gamificationActivityComponent)));
+            const formalQuizAvgScore = sp.quizzesAttemptedCount > 0
+                ? Math.min(100, Math.round((sp.quizScoreSum / sp.quizzesAttemptedCount) * 100) / 100)
+                : 0;
+            // L = Lesson Completion Score (0-100%)
+            const totalAvailLessons = totalLessonsCount || 1;
+            const lessonScoreL = Math.min(100, Math.round(((sp.lessonsCompletedCount / totalAvailLessons) * 100) * 100) / 100);
+            // S = System Interaction Score (0-100%) - normalized behavioral indicators without XP transaction double-counting
+            const activeDaysCount = sp.activeDaysSet ? sp.activeDaysSet.size : (sp.totalLessonsEngaged > 0 ? 1 : 0);
+            const loginCount = Math.max(sp.loginCount || 0, sp.totalLessonsEngaged > 0 ? 1 : 0);
+            const totalActivityEvents = loginCount + sp.totalLessonsEngaged + sp.totalQuestionsAttempted + sp.quizzesAttemptedCount + (sp.activityLogs ? sp.activityLogs.length : 0);
+            const systemInteractionScoreS = Math.min(100, Math.round((((activeDaysCount / RESEARCH_CONFIG.RESEARCH_INTERVENTION_DAYS) * 50) + ((totalActivityEvents / RESEARCH_CONFIG.MEANINGFUL_INTERACTION_REFERENCE) * 50)) * 100) / 100);
+            // Overall Composite Engagement Score E = 0.40V + 0.30Q + 0.20L + 0.10S
+            const overallEngagementScoreE = Math.min(100, Math.round(((RESEARCH_CONFIG.WEIGHTS.V * videoScoreV) + (RESEARCH_CONFIG.WEIGHTS.Q * quizScoreQ) + (RESEARCH_CONFIG.WEIGHTS.L * lessonScoreL) + (RESEARCH_CONFIG.WEIGHTS.S * systemInteractionScoreS)) * 100) / 100);
             const avgResponseTime = sp.totalQuestionsAttempted > 0
                 ? Math.round(sp.totalTimeTaken / sp.totalQuestionsAttempted)
                 : 0;
-            const isAtRisk = engagementScore < 50 || completionRate < 40;
-            let riskReason = "";
-            if (isAtRisk) {
-                if (completionRate < 40)
-                    riskReason = "Low lesson completion rate (< 40%)";
-                else if (sp.totalQuestionsAttempted === 0)
-                    riskReason = "Zero in-video question responses submitted";
-                else if (questionAccuracyRate < 40)
-                    riskReason = "Low question accuracy (< 40%)";
-                else
-                    riskReason = "Low overall activity & participation score";
-            }
+            // Rule-Based At-Risk Classification
+            const isAtRisk = overallEngagementScoreE < RESEARCH_CONFIG.AT_RISK.E_THRESHOLD ||
+                videoScoreV < RESEARCH_CONFIG.AT_RISK.V_THRESHOLD ||
+                quizScoreQ < RESEARCH_CONFIG.AT_RISK.Q_THRESHOLD;
+            const riskReasonsList = [];
+            if (overallEngagementScoreE < RESEARCH_CONFIG.AT_RISK.E_THRESHOLD)
+                riskReasonsList.push(`Low Composite Engagement Score (<${RESEARCH_CONFIG.AT_RISK.E_THRESHOLD})`);
+            if (videoScoreV < RESEARCH_CONFIG.AT_RISK.V_THRESHOLD)
+                riskReasonsList.push(`Low Video Progress (<${RESEARCH_CONFIG.AT_RISK.V_THRESHOLD})`);
+            if (quizScoreQ < RESEARCH_CONFIG.AT_RISK.Q_THRESHOLD)
+                riskReasonsList.push(`Low Assessment Participation (<${RESEARCH_CONFIG.AT_RISK.Q_THRESHOLD})`);
+            const riskReason = isAtRisk ? riskReasonsList.join("; ") : "N/A";
             return {
                 studentId: sp.studentId,
+                participantCode,
+                isResearchParticipant: sp.isResearchParticipant,
+                isTestUser: sp.isTestUser,
                 name: sp.name,
                 email: sp.email,
                 profilePhoto: sp.profilePhoto,
                 courseName: sp.courseName,
-                engagementScore,
-                completionRate,
-                questionAccuracyRate,
+                courseXP: sp.totalPoints,
+                engagementScore: overallEngagementScoreE,
+                completionRate: videoScoreV,
+                videoScoreV,
+                quizScoreQ,
+                lessonScoreL,
+                systemInteractionScoreS,
+                overallEngagementScoreE,
+                questionAccuracyRate: Math.round(checkpointAccuracy),
                 totalQuestionsAttempted: sp.totalQuestionsAttempted,
                 totalQuestionsCorrect: sp.totalQuestionsCorrect,
                 totalPoints: sp.totalPoints,
+                badges: sp.badges || [],
+                badgeCount: (sp.badges || []).length,
                 avgResponseTime,
                 isAtRisk,
                 riskReason,
+                riskReasons: riskReasonsList,
+                loginCount,
+                activeDaysCount,
+                firstActiveDate: sp.firstActiveDate || null,
                 lastActiveDate: sp.lastActiveDate || null,
+                quizzesAttemptedCount: sp.quizzesAttemptedCount,
+                quizzesPassedCount: sp.quizzesPassedCount,
+                quizzesFailedCount: sp.quizzesFailedCount,
+                finalQuizScore: sp.finalQuizScore,
                 pauseCount: sp.pauseCountSum,
                 rewatchCount: sp.rewatchCountSum,
                 totalPlayDuration: sp.totalPlayDurationSum,
-                totalLearningTimeMins: Math.round((sp.totalPlayDurationSum + sp.totalTimeTaken) / 60) || Math.round((completionRate * 15) / 60),
+                totalLearningTimeMins: Math.round((sp.totalPlayDurationSum + sp.totalTimeTaken) / 60) || Math.round((videoScoreV * 15) / 60),
                 lessonsCompletedCount: sp.lessonsCompletedCount,
                 totalLessonsEngaged: sp.totalLessonsEngaged,
                 fastResponseCount: sp.fastResponseCount,
@@ -615,9 +702,17 @@ export const getInteractiveAnalytics = async (req, res) => {
                 answeredQuestionsList: sp.answeredQuestionsList.slice(0, 15),
                 activityLogs: sp.activityLogs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 10),
             };
-        })
-            .sort((a, b) => b.engagementScore - a.engagementScore)
-            .map((s, idx) => ({ ...s, rank: idx + 1 }));
+        });
+        // Assign Competition Leaderboard Position based on CourseXP
+        const sortedByXP = [...rawStudentList].sort((a, b) => b.courseXP - a.courseXP);
+        let compRank = 1;
+        sortedByXP.forEach((item, idx) => {
+            if (idx > 0 && sortedByXP[idx - 1] && item.courseXP < (sortedByXP[idx - 1]?.courseXP || 0)) {
+                compRank = idx + 1;
+            }
+            item.leaderboardPosition = compRank;
+        });
+        const studentRankings = sortedByXP.map((s, idx) => ({ ...s, rank: idx + 1 }));
         const atRiskStudents = studentRankings.filter((s) => s.isAtRisk);
         // Course level summaries
         const courseSummariesMap = {};
@@ -1148,6 +1243,347 @@ export const getInteractiveAnalytics = async (req, res) => {
     catch (error) {
         console.error("Error in interactive analytics:", error);
         res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+// @desc Export Dedicated Anonymous Research CSV (Student_Engagement_Research_Data.csv)
+// @route GET /api/analytics/research-export
+export const exportResearchData = async (req, res) => {
+    try {
+        const courseIdParam = req.query.courseId ? String(req.query.courseId) : undefined;
+        let courses = courseIdParam ? await Course.find({ _id: courseIdParam }) : await Course.find();
+        courses = courses.filter(c => !c.title?.toLowerCase().includes("qa test") && !c.code?.toLowerCase().includes("qa"));
+        const courseIds = courses.map(c => c._id);
+        const enrollments = await Enrollment.find({ course: { $in: courseIds } })
+            .populate('student', 'participantCode name email role isResearchParticipant isTestUser badges points')
+            .populate('course', 'title code');
+        const studentIds = Array.from(new Set(enrollments
+            .map(e => e.student?._id?.toString())
+            .filter(Boolean)));
+        let students = await User.find({ _id: { $in: studentIds } });
+        students = students.filter(s => s.role === 'Student' && s.isResearchParticipant !== false && s.isTestUser !== true);
+        const allProgress = await StudentProgress.find({ student: { $in: studentIds }, course: { $in: courseIds } });
+        const allQuizAttempts = await QuizAttempt.find({ student: { $in: studentIds } }).populate('quiz', 'title isFinalQuiz');
+        const allActivities = await LearningActivity.find({ student: { $in: studentIds } });
+        const headers = [
+            "ParticipantCode",
+            "CourseId",
+            "CourseCode",
+            "CourseName",
+            "LoginCount",
+            "ActiveSessionCount",
+            "ActiveDaysCount",
+            "TotalActiveTime (Mins)",
+            "FirstActiveDate",
+            "LastActiveDate",
+            "VideosAvailable",
+            "VideosAccessed",
+            "VideosCompleted",
+            "AverageVideoWatchPercentage (%)",
+            "VideoCompletionRate (%)",
+            "TotalVideoWatchTime (Mins)",
+            "TotalVideoPlayDuration (Secs)",
+            "PauseCount",
+            "RewatchCount",
+            "LessonsAvailable",
+            "LessonsEngaged",
+            "LessonsCompleted",
+            "LessonCompletionRate (%)",
+            "CheckpointQuestionsAvailable",
+            "CheckpointQuestionsAttempted",
+            "CheckpointQuestionsCorrect",
+            "CheckpointQuestionsIncorrect",
+            "CheckpointAccuracy (%)",
+            "AvgCheckpointResponseTime (Secs)",
+            "QuizzesAvailable",
+            "QuizAttempts",
+            "UniqueQuizzesAttempted",
+            "QuizzesCompleted",
+            "QuizParticipationRate (%)",
+            "AverageQuizScore (%)",
+            "FinalQuizScore (%)",
+            "PassedQuizzes",
+            "FailedQuizzes",
+            "CourseXP",
+            "PointTransactionCount",
+            "BadgeCount",
+            "BadgesEarned",
+            "LeaderboardPosition",
+            "LeaderboardParticipantCount",
+            "V - Video Watch Score (%)",
+            "Q - Quiz Participation Score (%)",
+            "L - Lesson Completion Score (%)",
+            "S - System Interaction Score (%)",
+            "E - Overall Engagement Score (%)",
+            "AtRiskStatus",
+            "RiskReason",
+            "DataQualityStatus"
+        ];
+        let totalLessonsCount = 0;
+        let totalQuestionsConfigured = 0;
+        courses.forEach(c => {
+            c.modules?.forEach((m) => {
+                m.lessons?.forEach((l) => {
+                    totalLessonsCount++;
+                    totalQuestionsConfigured += l.questionMarkers?.length || 0;
+                });
+            });
+        });
+        const primaryCourse = courses[0];
+        const primaryCourseId = primaryCourse?._id?.toString() || "N/A";
+        const primaryCourseCode = primaryCourse?.code || "NA";
+        const primaryCourseName = primaryCourse?.title || "EduQuest Research Course";
+        // 1. Calculate raw participant metrics
+        const studentMetrics = students.map((s, idx) => {
+            const pCode = s.participantCode || `P${String(idx + 1).padStart(2, '0')}`;
+            const sId = s._id.toString();
+            const sProgress = allProgress.filter(p => p.student.toString() === sId);
+            const sQuizzes = allQuizAttempts.filter(q => q.student.toString() === sId);
+            const sActivities = allActivities.filter(a => a.student.toString() === sId);
+            const lessonsEngaged = sProgress.length;
+            const lessonsCompleted = sProgress.filter(p => p.completed).length;
+            const watchPercentSum = sProgress.reduce((sum, p) => sum + Math.min(100, Math.max(0, p.watchPercent || 0)), 0);
+            const playDurationSum = sProgress.reduce((sum, p) => sum + (p.totalPlayDuration || 0), 0);
+            const pauseCountSum = sProgress.reduce((sum, p) => sum + (p.pauseCount || 0), 0);
+            const rewatchCountSum = sProgress.reduce((sum, p) => sum + (p.rewatchCount || 0), 0);
+            let questionsAttempted = 0;
+            let questionsCorrect = 0;
+            let timeTakenSum = 0;
+            sProgress.forEach(p => {
+                questionsAttempted += p.answeredQuestions?.length || 0;
+                questionsCorrect += p.answeredQuestions?.filter(q => q.isCorrect).length || 0;
+                p.answeredQuestions?.forEach(q => {
+                    timeTakenSum += q.timeTaken || 0;
+                });
+            });
+            const videoScoreV = lessonsEngaged > 0 ? Math.min(100, Math.round((watchPercentSum / lessonsEngaged) * 100) / 100) : 0;
+            const checkpointAcc = questionsAttempted > 0 ? Math.min(100, Math.round((questionsCorrect / questionsAttempted) * 10000) / 100) : 0;
+            const quizAttemptsCount = sQuizzes.length;
+            const uniqueQuizzesAttempted = new Set(sQuizzes.map(q => q.quiz?._id?.toString() || q.quiz?.toString())).size;
+            const quizPassedCount = sQuizzes.filter(q => q.passed).length;
+            const quizFailedCount = quizAttemptsCount - quizPassedCount;
+            const quizScoreSum = sQuizzes.reduce((sum, q) => sum + (q.score || 0), 0);
+            const formalQuizAvg = quizAttemptsCount > 0 ? Math.min(100, Math.round((quizScoreSum / quizAttemptsCount) * 100) / 100) : 0;
+            const finalQuizObj = sQuizzes.find(q => q.quiz?.isFinalQuiz);
+            const finalQuizScore = finalQuizObj ? finalQuizObj.score || 0 : (sQuizzes.length > 0 ? Math.max(...sQuizzes.map(q => q.score || 0)) : 0);
+            // Q = Assessment Participation Score (0-100%) - based on UNIQUE quizzes
+            const totalAssessmentsConfigured = Math.max(1, totalQuestionsConfigured + (uniqueQuizzesAttempted > 0 ? uniqueQuizzesAttempted : 1));
+            const totalAssessmentsAttempted = questionsAttempted + uniqueQuizzesAttempted;
+            const quizScoreQ = Math.min(100, Math.round(((totalAssessmentsAttempted / totalAssessmentsConfigured) * 100) * 100) / 100);
+            // L = Lesson Completion Score (0-100%)
+            const totalAvailLessons = totalLessonsCount || 1;
+            const lessonScoreL = Math.min(100, Math.round(((lessonsCompleted / totalAvailLessons) * 100) * 100) / 100);
+            // S = System Interaction Score (0-100%) - using RESEARCH_CONFIG parameters
+            const loginEventsCount = sActivities.filter(a => a.activityType === RESEARCH_CONFIG.EVENTS.LOGIN).length;
+            const activeDaysSet = new Set(sActivities.map(a => new Date(a.timestamp).toISOString().split('T')[0]));
+            const activeDaysCount = activeDaysSet.size > 0 ? activeDaysSet.size : (lessonsEngaged > 0 ? 1 : 0);
+            const loginCount = Math.max(loginEventsCount, lessonsEngaged > 0 ? 1 : 0);
+            const meaningfulActivities = sActivities.filter(a => RESEARCH_CONFIG.MEANINGFUL_EVENTS.includes(a.activityType));
+            const totalActivityEvents = loginCount + lessonsEngaged + questionsAttempted + quizAttemptsCount + meaningfulActivities.length;
+            const systemInteractionScoreS = Math.min(100, Math.round((((activeDaysCount / RESEARCH_CONFIG.RESEARCH_INTERVENTION_DAYS) * 50) + ((totalActivityEvents / RESEARCH_CONFIG.MEANINGFUL_INTERACTION_REFERENCE) * 50)) * 100) / 100);
+            // E = Overall Composite Engagement Score (0-100%)
+            const overallEngagementScoreE = Math.min(100, Math.round(((RESEARCH_CONFIG.WEIGHTS.V * videoScoreV) + (RESEARCH_CONFIG.WEIGHTS.Q * quizScoreQ) + (RESEARCH_CONFIG.WEIGHTS.L * lessonScoreL) + (RESEARCH_CONFIG.WEIGHTS.S * systemInteractionScoreS)) * 100) / 100);
+            // Rule-based At-Risk Classification (Multiple Reasons)
+            const isAtRisk = overallEngagementScoreE < RESEARCH_CONFIG.AT_RISK.E_THRESHOLD ||
+                videoScoreV < RESEARCH_CONFIG.AT_RISK.V_THRESHOLD ||
+                quizScoreQ < RESEARCH_CONFIG.AT_RISK.Q_THRESHOLD;
+            const riskReasonsList = [];
+            if (overallEngagementScoreE < RESEARCH_CONFIG.AT_RISK.E_THRESHOLD)
+                riskReasonsList.push(`Low Composite Engagement Score (<${RESEARCH_CONFIG.AT_RISK.E_THRESHOLD})`);
+            if (videoScoreV < RESEARCH_CONFIG.AT_RISK.V_THRESHOLD)
+                riskReasonsList.push(`Low Video Progress (<${RESEARCH_CONFIG.AT_RISK.V_THRESHOLD})`);
+            if (quizScoreQ < RESEARCH_CONFIG.AT_RISK.Q_THRESHOLD)
+                riskReasonsList.push(`Low Assessment Participation (<${RESEARCH_CONFIG.AT_RISK.Q_THRESHOLD})`);
+            const riskReason = isAtRisk ? riskReasonsList.join("; ") : "N/A";
+            // Course-specific XP
+            const courseXP = sProgress.reduce((sum, p) => sum + (p.totalPointsEarned || 0), 0) + sQuizzes.reduce((sum, q) => sum + (q.earnedPoints || 0), 0) || (s.points || 0);
+            // Data Quality Status
+            let dataQualityStatus = "VALID";
+            if (!s.participantCode)
+                dataQualityStatus = "NEEDS_REVIEW";
+            if (overallEngagementScoreE < 0 || overallEngagementScoreE > 100)
+                dataQualityStatus = "INVALID";
+            const firstActiveDate = sActivities.length > 0 ? new Date(Math.min(...sActivities.map(a => new Date(a.timestamp).getTime()))).toISOString() : "N/A";
+            const lastActiveDate = sActivities.length > 0 ? new Date(Math.max(...sActivities.map(a => new Date(a.timestamp).getTime()))).toISOString() : "N/A";
+            return {
+                pCode,
+                courseId: primaryCourseId,
+                courseCode: primaryCourseCode,
+                courseName: primaryCourseName,
+                loginCount,
+                activeDaysCount,
+                totalActiveTimeMins: Math.round((playDurationSum + timeTakenSum) / 60),
+                firstActiveDate,
+                lastActiveDate,
+                totalLessonsCount,
+                lessonsEngaged,
+                lessonsCompleted,
+                videoScoreV,
+                videoCompletionRate: Math.round((lessonsCompleted / totalAvailLessons) * 100),
+                totalVideoWatchTimeMins: Math.round(playDurationSum / 60),
+                playDurationSum,
+                pauseCountSum,
+                rewatchCountSum,
+                lessonScoreL,
+                totalQuestionsConfigured,
+                questionsAttempted,
+                questionsCorrect,
+                questionsIncorrect: Math.max(0, questionsAttempted - questionsCorrect),
+                checkpointAcc: Math.round(checkpointAcc),
+                avgCheckpointResponseTime: questionsAttempted > 0 ? Math.round(timeTakenSum / questionsAttempted) : 0,
+                quizzesAvailable: 1,
+                quizAttemptsCount,
+                uniqueQuizzesAttempted,
+                quizPassedCount,
+                quizParticipationRate: uniqueQuizzesAttempted > 0 ? 100 : 0,
+                formalQuizAvg: Math.round(formalQuizAvg),
+                finalQuizScore,
+                quizFailedCount,
+                courseXP,
+                pointTransactionCount: sActivities.length,
+                badgeCount: (s.badges || []).length,
+                badgesEarned: (s.badges || []).join('; ') || 'None',
+                videoScoreVExport: videoScoreV,
+                quizScoreQExport: quizScoreQ,
+                lessonScoreLExport: lessonScoreL,
+                systemInteractionScoreSExport: systemInteractionScoreS,
+                overallEngagementScoreEExport: overallEngagementScoreE,
+                isAtRisk,
+                riskReason,
+                dataQualityStatus
+            };
+        });
+        // 2. Assign competition leaderboard position based on CourseXP
+        const sortedByXP = [...studentMetrics].sort((a, b) => b.courseXP - a.courseXP);
+        let compRank = 1;
+        sortedByXP.forEach((item, idx) => {
+            if (idx > 0 && sortedByXP[idx - 1] && item.courseXP < (sortedByXP[idx - 1]?.courseXP || 0)) {
+                compRank = idx + 1;
+            }
+            item.leaderboardPosition = compRank;
+        });
+        const studentRows = sortedByXP.map(s => [
+            `"${s.pCode}"`,
+            `"${s.courseId}"`,
+            `"${s.courseCode}"`,
+            `"${s.courseName}"`,
+            s.loginCount,
+            s.activeDaysCount,
+            s.activeDaysCount,
+            s.totalActiveTimeMins,
+            `"${s.firstActiveDate}"`,
+            `"${s.lastActiveDate}"`,
+            s.totalLessonsCount,
+            s.lessonsEngaged,
+            s.lessonsCompleted,
+            s.videoScoreV,
+            s.videoCompletionRate,
+            s.totalVideoWatchTimeMins,
+            s.playDurationSum,
+            s.pauseCountSum,
+            s.rewatchCountSum,
+            s.totalLessonsCount,
+            s.lessonsEngaged,
+            s.lessonsCompleted,
+            s.lessonScoreL,
+            s.totalQuestionsConfigured,
+            s.questionsAttempted,
+            s.questionsCorrect,
+            s.questionsIncorrect,
+            s.checkpointAcc,
+            s.avgCheckpointResponseTime,
+            s.quizzesAvailable,
+            s.quizAttemptsCount,
+            s.uniqueQuizzesAttempted,
+            s.quizPassedCount,
+            s.quizParticipationRate,
+            s.formalQuizAvg,
+            s.finalQuizScore,
+            s.quizPassedCount,
+            s.quizFailedCount,
+            s.courseXP,
+            s.pointTransactionCount,
+            s.badgeCount,
+            `"${s.badgesEarned}"`,
+            s.leaderboardPosition,
+            studentMetrics.length,
+            s.videoScoreVExport,
+            s.quizScoreQExport,
+            s.lessonScoreLExport,
+            s.systemInteractionScoreSExport,
+            s.overallEngagementScoreEExport,
+            `"${s.isAtRisk ? "Yes (At-Risk)" : "No (On Track)"}"`,
+            `"${s.riskReason}"`,
+            `"${s.dataQualityStatus}"`
+        ]);
+        const csvOutput = "\uFEFF" + [headers.join(","), ...studentRows.map(r => r.join(","))].join("\n");
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename=Student_Engagement_Research_Data_${new Date().toISOString().split('T')[0]}.csv`);
+        res.send(csvOutput);
+    }
+    catch (err) {
+        console.error("Error exporting research CSV:", err);
+        res.status(500).json({ message: "Export error", error: err.message });
+    }
+};
+// @desc Export Dedicated Anonymous Raw Events CSV (Student_Engagement_Raw_Events.csv)
+// @route GET /api/analytics/raw-events-export
+export const exportRawEventsData = async (req, res) => {
+    try {
+        const courseIdParam = req.query.courseId ? String(req.query.courseId) : undefined;
+        let courses = courseIdParam ? await Course.find({ _id: courseIdParam }) : await Course.find();
+        courses = courses.filter(c => !c.title?.toLowerCase().includes("qa test") && !c.code?.toLowerCase().includes("qa"));
+        const validCourseIds = courses.map(c => c._id.toString());
+        const query = {};
+        if (courseIdParam)
+            query.course = courseIdParam;
+        const rawActivities = await LearningActivity.find(query)
+            .populate('student', 'participantCode name isTestUser isResearchParticipant role')
+            .populate('course', 'title code')
+            .sort({ timestamp: -1 });
+        const filtered = rawActivities.filter(a => {
+            const sObj = a.student;
+            const cObj = a.course;
+            const isStudentRole = sObj?.role === 'Student';
+            const isResearchParticipant = sObj?.isResearchParticipant !== false;
+            const isNotTestUser = sObj?.isTestUser !== true;
+            const isRealCourse = !cObj || validCourseIds.includes(cObj._id?.toString());
+            return isStudentRole && isResearchParticipant && isNotTestUser && isRealCourse;
+        });
+        const headers = [
+            "ParticipantCode",
+            "CourseId",
+            "CourseCode",
+            "CourseName",
+            "LessonId",
+            "EventType",
+            "Timestamp",
+            "XPValue",
+            "MetadataJSON"
+        ];
+        const rows = filtered.map((act, idx) => {
+            const sObj = act.student;
+            const pCode = sObj?.participantCode || `P${String(idx + 1).padStart(2, '0')}`;
+            const cObj = act.course;
+            return [
+                `"${pCode}"`,
+                `"${cObj?._id?.toString() || 'N/A'}"`,
+                `"${cObj?.code || 'CS101'}"`,
+                `"${cObj?.title || 'EduQuest Research Course'}"`,
+                `"${act.lessonId || 'N/A'}"`,
+                `"${act.activityType}"`,
+                `"${new Date(act.timestamp).toISOString()}"`,
+                act.metadata?.xp || 0,
+                `"${JSON.stringify(act.metadata || {}).replace(/"/g, '""')}"`
+            ];
+        });
+        const csvOutput = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename=Student_Engagement_Raw_Events_${new Date().toISOString().split('T')[0]}.csv`);
+        res.send(csvOutput);
+    }
+    catch (err) {
+        console.error("Error exporting raw events CSV:", err);
+        res.status(500).json({ message: "Export raw events error", error: err.message });
     }
 };
 //# sourceMappingURL=interactiveLessonController.js.map

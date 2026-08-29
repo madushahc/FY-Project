@@ -6,6 +6,7 @@ import Enrollment from "../models/Enrollment.js";
 import Quiz from "../models/Quiz.js";
 import QuizAttempt from "../models/QuizAttempt.js";
 import User from "../models/User.js";
+import LearningActivity from "../models/LearningActivity.js";
 import { sendNotificationToUser } from "../utils/notificationService.js";
 import { checkAndAwardBadges } from "../utils/gamificationService.js";
 import { AuthRequest } from "../middleware/auth.js";
@@ -162,6 +163,15 @@ export const startQuizAttempt = async (
       answersSaved: [],
       passed: false
     });
+
+    await LearningActivity.create({
+      student: studentId as any,
+      activityType: 'quiz_started',
+      title: quiz.title || 'Quiz Attempt Started',
+      details: `Started attempt #${attemptCount + 1} for quiz ${quiz.title}`,
+      metadata: { quizId: String(quizId), attemptId: String(attempt._id) },
+      timestamp: new Date()
+    }).catch(err => console.error("Non-fatal: Failed to log quiz_started activity", err));
 
     res.status(201).json({
       attemptId: attempt._id,
@@ -403,6 +413,28 @@ export const submitQuizAttempt = async (
     };
 
     await attempt.save();
+
+    // Log LearningActivity event
+    try {
+      await LearningActivity.create({
+        student: req.user?._id as any,
+        course: quiz.course as any,
+        activityType: isTimeoutAttempt ? 'quiz_timed_out' : 'quiz_submitted',
+        title: `Quiz ${isTimeoutAttempt ? 'Timed Out' : 'Submitted'}: ${quiz.title}`,
+        details: `Scored ${scorePercentage}% (${earnedPoints}/${totalPoints} pts, ${xpEarned} XP earned)`,
+        metadata: {
+          quizId: String(quizId),
+          attemptId: String(attempt._id),
+          scorePercentage,
+          earnedPoints,
+          passed,
+          isTimedOut: isTimeoutAttempt
+        },
+        timestamp: new Date()
+      });
+    } catch (e) {
+      console.error("Non-fatal: Error logging quiz attempt learning activity", e);
+    }
 
     // Notify instructor about quiz attempt
     try {

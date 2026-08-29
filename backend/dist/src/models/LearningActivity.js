@@ -1,13 +1,11 @@
 import mongoose, { Schema } from 'mongoose';
 const LearningActivitySchema = new Schema({
     student: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    course: { type: Schema.Types.ObjectId, ref: 'Course', required: true },
+    course: { type: Schema.Types.ObjectId, ref: 'Course' },
     lessonId: { type: String },
-    activityType: {
-        type: String,
-        enum: ['login', 'lesson_access', 'video_play', 'video_pause', 'video_rewatch', 'question_attempt', 'quiz_attempt', 'assignment_submission'],
-        required: true
-    },
+    activityType: { type: String, required: true },
+    title: { type: String },
+    details: { type: String },
     metadata: { type: Schema.Types.Mixed },
     timestamp: { type: Date, default: Date.now }
 }, {

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import User from "../models/User.js";
+import LearningActivity from "../models/LearningActivity.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -125,10 +126,19 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 
       if (requestedRole && requestedRole !== actualRole) {
         res.status(403).json({
-          message: `This account is registered as a ${user.role}. Please select the ${user.role} role tab to sign in.`,
+          message: `Please check your credentials.`,
         });
         return;
       }
+
+      // Log authentication session event
+      await LearningActivity.create({
+        student: user._id,
+        activityType: 'login',
+        title: 'User Login Session',
+        details: 'User authenticated successfully',
+        timestamp: new Date()
+      }).catch(err => console.error("Failed to log login activity", err));
 
       res.json({
         ...buildUserResponse(user),

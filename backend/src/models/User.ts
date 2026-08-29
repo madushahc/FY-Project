@@ -19,6 +19,9 @@ export interface IUser extends Document {
   profilePhoto?: string;
   resetPasswordToken?: string | undefined;
   resetPasswordExpires?: Date | undefined;
+  participantCode?: string;
+  isResearchParticipant?: boolean;
+  isTestUser?: boolean;
 }
 
 const userSchema = new Schema<IUser>(
@@ -52,6 +55,9 @@ const userSchema = new Schema<IUser>(
     profilePhoto: { type: String, default: "" },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
+    participantCode: { type: String, default: "" },
+    isResearchParticipant: { type: Boolean, default: true },
+    isTestUser: { type: Boolean, default: false },
   },
   {
     timestamps: true,
