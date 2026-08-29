@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import axios from "axios";
+import api from "@/lib/api";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { GraduationCap, Lock, CheckCircle2, ArrowLeft } from "lucide-react";
@@ -41,8 +41,8 @@ function ResetPasswordForm() {
     setLoading(true);
 
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/auth/reset-password",
+      const response = await api.post(
+        "/auth/reset-password",
         {
           token,
           password,

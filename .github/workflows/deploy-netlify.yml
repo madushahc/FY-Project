@@ -1,0 +1,41 @@
+name: Deploy EduQuest Full-Stack to Netlify
+
+on:
+  push:
+    branches: [ dev, main, master ]
+  pull_request:
+    branches: [ dev, main, master ]
+  workflow_dispatch:
+
+jobs:
+  deploy-to-netlify:
+    name: Build & Deploy to Netlify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install & Build Backend
+        run: |
+          cd backend
+          npm ci || npm install
+          npm run build
+
+      - name: Install & Build Frontend
+        run: |
+          cd Frontend
+          npm ci || npm install
+          npm run build
+
+      - name: Deploy to Netlify Production
+        run: |
+          npx netlify-cli deploy --prod --dir=Frontend/.next --functions=backend/dist/src --site=${{ secrets.NETLIFY_SITE_ID }} --auth=${{ secrets.NETLIFY_AUTH_TOKEN }}
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
