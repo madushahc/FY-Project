@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import axios from "axios";
+import api from "@/lib/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GraduationCap, Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
@@ -21,8 +21,8 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      const response = await axios.post(
-        "http://localhost:5000/api/auth/forgot-password",
+      const response = await api.post(
+        "/auth/forgot-password",
         { email }
       );
 
