@@ -16,10 +16,10 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install & Build Backend
         run: |
@@ -35,7 +35,8 @@ jobs:
 
       - name: Deploy to Netlify Production
         run: |
-          npx netlify-cli deploy --prod --dir=Frontend/.next --functions=backend/dist/src --site=${{ secrets.NETLIFY_SITE_ID }} --auth=${{ secrets.NETLIFY_AUTH_TOKEN }}
+          cd Frontend
+          npx netlify-cli deploy --prod --dir=.next --functions=../backend/dist/src --site=${{ secrets.NETLIFY_SITE_ID }} --auth=${{ secrets.NETLIFY_AUTH_TOKEN }}
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
