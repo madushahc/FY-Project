@@ -21,22 +21,29 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install & Build Backend
+      - name: Install & Build Backend TypeScript
         run: |
           cd backend
           npm ci || npm install
           npm run build
 
-      - name: Install & Build Frontend
+      - name: Install & Build Frontend Next.js
         run: |
           cd Frontend
           npm ci || npm install
           npm run build
 
-      - name: Deploy to Netlify Production
-        run: |
-          cd Frontend
-          npx netlify-cli deploy --prod --dir=.next --functions=../backend/dist/src --site=${{ secrets.NETLIFY_SITE_ID }} --auth=${{ secrets.NETLIFY_AUTH_TOKEN }}
+      - name: Deploy Live Site to Netlify Production
+        uses: nwtgck/actions-netlify@v3.0
+        with:
+          publish-dir: './Frontend/.next'
+          functions-dir: './backend/dist/src'
+          production-deploy: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "EduQuest Netlify Production Build & Deploy"
+          enable-pull-request-comment: true
+          enable-commit-comment: true
+          overwrites-pull-request-comment: true
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
