@@ -1,4 +1,4 @@
-name: EduQuest CI/CD Pipeline - Netlify Automated Deployment
+name: Deploy EduQuest Full-Stack to Netlify
 
 on:
   push:
@@ -8,34 +8,42 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
-    name: Build Full-Stack & Deploy to Netlify
+  deploy-to-netlify:
+    name: Build & Deploy to Netlify
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
-      - name: Install Backend Dependencies & Build TypeScript
+      - name: Install & Build Backend TypeScript
         run: |
           cd backend
           npm ci || npm install
           npm run build
 
-      - name: Install Frontend Dependencies & Build Next.js
+      - name: Install & Build Frontend Next.js
         run: |
           cd Frontend
           npm ci || npm install
           npm run build
 
-      - name: Deploy Both Frontend & Serverless Backend to Netlify
-        run: |
-          npx netlify-cli deploy --prod --dir=Frontend/.next --functions=backend/dist/src
+      - name: Deploy Live Site to Netlify Production
+        uses: nwtgck/actions-netlify@v3.0
+        with:
+          publish-dir: './Frontend/.next'
+          functions-dir: './backend/dist/functions'
+          production-deploy: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "EduQuest Netlify Production Build & Deploy"
+          enable-pull-request-comment: true
+          enable-commit-comment: true
+          overwrites-pull-request-comment: true
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}

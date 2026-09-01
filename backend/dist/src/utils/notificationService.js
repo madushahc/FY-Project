@@ -34,4 +34,3 @@ export async function sendNotificationToUser(userId, payload) {
         console.error("Failed to create notification", err);
     }
 }
-//# sourceMappingURL=notificationService.js.map

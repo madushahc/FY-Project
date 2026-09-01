@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node dist/src/index.js",
-    "build": "tsc",
+    "build": "node -e \"fs.rmSync('dist', {recursive: true, force: true})\" && node node_modules/typescript/bin/tsc && node scripts/copyFunctions.js",
     "dev": "nodemon --watch src --exec \"node --loader ts-node/esm src/index.ts\""
   },
   "keywords": [],
@@ -16,6 +16,15 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^20.11.0",
+    "@types/nodemailer": "^8.0.1",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.8",
     "axios": "^1.17.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
@@ -33,15 +42,6 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/multer": "^2.1.0",
-    "@types/node": "^20.11.0",
-    "@types/nodemailer": "^8.0.1",
-    "@types/swagger-jsdoc": "^6.0.4",
-    "@types/swagger-ui-express": "^4.1.8",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2"
   }

@@ -171,4 +171,3 @@ export const likeReply = async (req, res) => {
         res.status(400).json({ message: "Reply like failed" });
     }
 };
-//# sourceMappingURL=forumController.js.map

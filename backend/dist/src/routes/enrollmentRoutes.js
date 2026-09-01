@@ -74,4 +74,3 @@ router.get("/my-enrollments", protect, authorize("Student"), getMyEnrollments);
  */
 router.patch("/:id/progress", protect, authorize("Student"), updateProgress);
 export default router;
-//# sourceMappingURL=enrollmentRoutes.js.map

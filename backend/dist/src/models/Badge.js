@@ -13,4 +13,3 @@ const BadgeSchema = new Schema({
     timestamps: true
 });
 export default mongoose.model('Badge', BadgeSchema);
-//# sourceMappingURL=Badge.js.map

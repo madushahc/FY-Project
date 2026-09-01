@@ -18,4 +18,3 @@ const SubmissionSchema = new Schema({
     timestamps: true
 });
 export default mongoose.model('Submission', SubmissionSchema);
-//# sourceMappingURL=Submission.js.map

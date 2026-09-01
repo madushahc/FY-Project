@@ -131,4 +131,3 @@ router.route('/:id')
     .put(protect, authorize('Lecturer', 'Admin'), upload.single('thumbnail'), updateCourse)
     .delete(protect, authorize('Lecturer', 'Admin'), deleteCourse);
 export default router;
-//# sourceMappingURL=courseRoutes.js.map

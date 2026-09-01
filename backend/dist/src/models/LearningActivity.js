@@ -13,4 +13,3 @@ const LearningActivitySchema = new Schema({
 });
 LearningActivitySchema.index({ student: 1, course: 1, activityType: 1, timestamp: -1 });
 export default mongoose.model('LearningActivity', LearningActivitySchema);
-//# sourceMappingURL=LearningActivity.js.map

@@ -132,4 +132,3 @@ router.get('/leaderboard', protect, getLeaderboard);
 router.get('/rules', protect, getPointRules);
 router.post('/rules', protect, authorize('Lecturer', 'Admin'), updatePointRules);
 export default router;
-//# sourceMappingURL=gamificationRoutes.js.map

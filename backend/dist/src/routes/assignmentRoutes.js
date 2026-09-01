@@ -124,4 +124,3 @@ router.post('/:assignmentId/submit', protect, authorize('Student'), upload.singl
  */
 router.put('/:submissionId/grade', protect, authorize('Lecturer', 'Admin'), gradeSubmission);
 export default router;
-//# sourceMappingURL=assignmentRoutes.js.map

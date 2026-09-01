@@ -31,4 +31,3 @@ const options = {
     apis: ['./src/routes/*.ts', './dist/routes/*.js'], // Files containing Swagger annotations
 };
 export const swaggerSpec = swaggerJsdoc(options);
-//# sourceMappingURL=swagger.js.map
