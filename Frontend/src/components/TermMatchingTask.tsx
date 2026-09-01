@@ -33,7 +33,7 @@ export default function TermMatchingTask({
   const [selectedTerm, setSelectedTerm] = useState<string | null>(null);
   const [userMatches, setUserMatches] = useState<Record<string, string>>({});
   const [shuffledDefs, setShuffledDefs] = useState<string[]>([]);
-  const [startTime] = useState<number>(Date.now());
+  const [startTime] = useState<number>(() => Date.now());
 
   // Shuffle definitions on load
   useEffect(() => {

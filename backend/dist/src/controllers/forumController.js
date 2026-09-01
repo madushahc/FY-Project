@@ -30,14 +30,21 @@ export const getAllPosts = async (req, res) => {
 };
 export const createPost = async (req, res) => {
     try {
+        const courseId = req.body.course || req.body.courseId;
+        if (!courseId) {
+            res.status(400).json({ message: "Course ID is required" });
+            return;
+        }
         const post = await ForumPost.create({
             ...req.body,
+            course: courseId,
             author: req.user?._id,
         });
         res.status(201).json(post);
     }
     catch (error) {
-        res.status(400).json({ message: "Invalid post data" });
+        console.error("Failed to create forum post:", error);
+        res.status(400).json({ message: error?.message || "Invalid post data" });
     }
 };
 export const replyToPost = async (req, res) => {

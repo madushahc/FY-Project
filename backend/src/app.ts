@@ -4,7 +4,16 @@ import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import { seedDefaultBadges } from './controllers/gamificationController.js';
 
+import path from 'path';
+import fs from 'fs';
+
 dotenv.config();
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 // Connect DB asynchronously
 let isDbConnected = false;
@@ -23,6 +32,9 @@ app.use(cors({
   origin: '*',
   credentials: true
 }));
+
+// Serve uploaded static files
+app.use('/uploads', express.static(uploadsDir));
 
 // DB Connection Middleware for Serverless execution
 app.use(async (req, res, next) => {

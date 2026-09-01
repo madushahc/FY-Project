@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import TermMatchingTask, { IMatchingPair } from "@/components/TermMatchingTask";
+import { resolveMediaUrl } from "@/lib/mediaUrl";
 
 export interface IQuestionMarker {
   _id?: string;
@@ -52,6 +53,7 @@ export default function InteractiveReadingPlayer({
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const resolvedUrl = resolveMediaUrl(contentUrl);
   const [scrollPercent, setScrollPercent] = useState<number>(0);
   const [maxScrollReached, setMaxScrollReached] = useState<number>(0);
 
@@ -408,7 +410,7 @@ export default function InteractiveReadingPlayer({
         ) : null}
 
         {/* Render Uploaded Content/File/Document Material */}
-        {contentUrl ? (
+        {resolvedUrl ? (
           <div className="w-full bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
             <div className="bg-slate-100 p-3.5 border-b border-slate-200 flex justify-between items-center text-xs font-semibold text-slate-600">
               <span className="flex items-center gap-2 font-bold text-slate-700">
@@ -416,7 +418,7 @@ export default function InteractiveReadingPlayer({
                 Material / Uploaded Document
               </span>
               <a
-                href={contentUrl}
+                href={resolvedUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:text-blue-800 flex items-center gap-1 font-extrabold text-xs transition"
@@ -427,7 +429,7 @@ export default function InteractiveReadingPlayer({
             <div className="w-full h-[650px] bg-slate-100">
               <iframe
                 ref={iframeRef}
-                src={contentUrl}
+                src={resolvedUrl}
                 className="w-full h-full border-none"
                 onLoad={handleScroll}
               />
@@ -435,7 +437,7 @@ export default function InteractiveReadingPlayer({
           </div>
         ) : null}
 
-        {!description && !contentUrl && (
+        {!description && !resolvedUrl && (
           <div className="w-full bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-400 font-medium">
             No reading text or uploaded materials attached to this lesson.
           </div>

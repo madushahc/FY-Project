@@ -8,7 +8,7 @@ import { sendResetEmail } from "../utils/emailService.js";
 
 const generateToken = (id: string) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || "secret", {
-    expiresIn: "30d",
+    expiresIn: "2h",
   });
 };
 
@@ -117,20 +117,6 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     const user = await User.findOne({ email: normalizedEmail });
 
     if (user && (await bcrypt.compare(password, user.passwordHash))) {
-      const requestedRole = String(role || "")
-        .trim()
-        .toLowerCase();
-      const actualRole = String(user.role || "")
-        .trim()
-        .toLowerCase();
-
-      if (requestedRole && requestedRole !== actualRole) {
-        res.status(403).json({
-          message: `Please check your credentials.`,
-        });
-        return;
-      }
-
       // Log authentication session event
       await LearningActivity.create({
         student: user._id,

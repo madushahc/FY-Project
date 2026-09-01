@@ -8,6 +8,7 @@ import { ArrowLeft, Check, Play, FileText, PenTool, Link as LinkIcon, BookOpen, 
 import Loading from '@/components/ui/Loading';
 import InteractiveVideoPlayer from '@/components/InteractiveVideoPlayer';
 import InteractiveReadingPlayer from '@/components/InteractiveReadingPlayer';
+import { resolveMediaUrl } from '@/lib/mediaUrl';
 
 export default function CoursePlayerView() {
   const params = useParams();
@@ -270,9 +271,7 @@ export default function CoursePlayerView() {
   const renderContentArea = () => {
     if (!activeLesson) return <div className="p-12 text-center text-slate-500">No content available.</div>;
 
-    const fullUrl = activeLesson.contentUrl?.startsWith('/')
-      ? `http://localhost:5000${activeLesson.contentUrl}`
-      : activeLesson.contentUrl;
+    const fullUrl = resolveMediaUrl(activeLesson.contentUrl);
 
     if (activeLesson.type === 'video' && fullUrl) {
       return (

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import {
@@ -98,37 +98,60 @@ export default function DiscussionForum() {
     } else {
       if (myEnrollments.length > 0) {
         fetchAllPosts();
-        if (!selectedCourseId) {
-          const firstCourseId =
-            myEnrollments[0].course._id || myEnrollments[0].course;
-          setSelectedCourseId(firstCourseId as string);
-        }
       } else {
         setLoading(false);
       }
     }
   }, [myEnrollments, activeTab]);
 
+  useEffect(() => {
+    if (myEnrollments.length > 0 && !selectedCourseId) {
+      const firstCourseId = (myEnrollments[0].course as any)?._id || myEnrollments[0].course;
+      if (firstCourseId) setSelectedCourseId(String(firstCourseId));
+    }
+  }, [myEnrollments, selectedCourseId]);
+
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPostTitle || !newPostContent || !selectedCourseId) return;
+
+    let targetCourseId = selectedCourseId;
+    if (!targetCourseId && myEnrollments.length > 0) {
+      targetCourseId = String((myEnrollments[0].course as any)?._id || myEnrollments[0].course);
+      setSelectedCourseId(targetCourseId);
+    }
+
+    if (!targetCourseId) {
+      alert("Please enroll in a course first before creating a discussion post.");
+      return;
+    }
+
+    if (!newPostTitle.trim()) {
+      alert("Please enter a title for your discussion post.");
+      return;
+    }
+
+    if (!newPostContent.trim()) {
+      alert("Please enter details for your discussion post.");
+      return;
+    }
 
     setSubmittingPost(true);
     try {
       await createPost({
-        course: selectedCourseId,
-        title: newPostTitle,
-        content: newPostContent,
+        course: targetCourseId,
+        title: newPostTitle.trim(),
+        content: newPostContent.trim(),
       });
       setIsPostModalOpen(false);
       setNewPostTitle("");
       setNewPostContent("");
       await fetchAllPosts(); // Refresh aggregated feed
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to create post", err);
-      alert("Failed to create post.");
+      alert(err.response?.data?.message || "Failed to publish discussion post.");
+    } finally {
+      setSubmittingPost(false);
     }
-    setSubmittingPost(false);
   };
 
   const handleReplySubmit = async (postId: string) => {
@@ -209,7 +232,13 @@ export default function DiscussionForum() {
           ))}
         </div>
         <button
-          onClick={() => setIsPostModalOpen(true)}
+          onClick={() => {
+            if (!selectedCourseId && myEnrollments.length > 0) {
+              const firstId = (myEnrollments[0].course as any)?._id || myEnrollments[0].course;
+              if (firstId) setSelectedCourseId(String(firstId));
+            }
+            setIsPostModalOpen(true);
+          }}
           className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm"
         >
           + New Post
