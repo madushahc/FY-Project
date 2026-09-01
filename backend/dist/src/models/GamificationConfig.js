@@ -6,4 +6,3 @@ const gamificationConfigSchema = new Schema({
     forum: { type: Number, default: 5 }
 });
 export default mongoose.model('GamificationConfig', gamificationConfigSchema);
-//# sourceMappingURL=GamificationConfig.js.map

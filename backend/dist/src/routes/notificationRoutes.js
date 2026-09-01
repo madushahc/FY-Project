@@ -54,4 +54,3 @@ router.patch('/read-all', protect, markAllAsRead);
  */
 router.patch('/:id/read', protect, markAsRead);
 export default router;
-//# sourceMappingURL=notificationRoutes.js.map

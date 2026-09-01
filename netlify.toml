@@ -2,7 +2,7 @@
   base = "Frontend"
   command = "npm run build"
   publish = ".next"
-  functions = "../backend/dist/src"
+  functions = "../backend/dist/functions"
 
 [build.environment]
   NODE_VERSION = "20"

@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET || "secret", {
-        expiresIn: "30d",
+        expiresIn: "2h",
     });
 };
 const buildUserResponse = (user) => ({
@@ -88,18 +88,6 @@ export const loginUser = async (req, res) => {
             .toLowerCase();
         const user = await User.findOne({ email: normalizedEmail });
         if (user && (await bcrypt.compare(password, user.passwordHash))) {
-            const requestedRole = String(role || "")
-                .trim()
-                .toLowerCase();
-            const actualRole = String(user.role || "")
-                .trim()
-                .toLowerCase();
-            if (requestedRole && requestedRole !== actualRole) {
-                res.status(403).json({
-                    message: `Please check your credentials.`,
-                });
-                return;
-            }
             // Log authentication session event
             await LearningActivity.create({
                 student: user._id,
@@ -189,4 +177,3 @@ export const resetPassword = async (req, res) => {
         });
     }
 };
-//# sourceMappingURL=authController.js.map

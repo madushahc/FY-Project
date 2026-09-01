@@ -53,4 +53,3 @@ export const authorize = (...roles) => {
         next();
     };
 };
-//# sourceMappingURL=auth.js.map

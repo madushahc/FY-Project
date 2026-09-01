@@ -21,4 +21,3 @@ router.post('/', protect, authorize('Lecturer', 'Admin'), upload.single('file'),
     });
 });
 export default router;
-//# sourceMappingURL=uploadRoutes.js.map

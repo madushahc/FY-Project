@@ -209,4 +209,3 @@ export const getActivityStats = async (req, res) => {
         res.status(500).json({ message: "Server Error" });
     }
 };
-//# sourceMappingURL=submissionController.js.map

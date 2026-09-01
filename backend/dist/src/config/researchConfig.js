@@ -57,4 +57,3 @@ export const RESEARCH_CONFIG = {
     ]
 };
 export default RESEARCH_CONFIG;
-//# sourceMappingURL=researchConfig.js.map

@@ -37,7 +37,7 @@ jobs:
         uses: nwtgck/actions-netlify@v3.0
         with:
           publish-dir: './Frontend/.next'
-          functions-dir: './backend/dist/src'
+          functions-dir: './backend/dist/functions'
           production-deploy: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
           deploy-message: "EduQuest Netlify Production Build & Deploy"

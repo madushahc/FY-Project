@@ -119,4 +119,3 @@ router.get('/stats/:assignmentId', protect, authorize('Lecturer', 'Admin'), getA
  */
 router.put('/:id/grade', protect, authorize('Lecturer', 'Admin'), gradeSubmission);
 export default router;
-//# sourceMappingURL=submissionRoutes.js.map

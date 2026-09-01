@@ -91,4 +91,3 @@ router.post("/:postId/reply", protect, replyToPost);
 router.post("/:postId/like", protect, likePost);
 router.post("/:postId/reply/:replyId/like", protect, likeReply);
 export default router;
-//# sourceMappingURL=forumRoutes.js.map

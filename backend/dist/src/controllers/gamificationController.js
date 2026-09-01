@@ -204,4 +204,3 @@ export const toggleBadgeActive = async (req, res) => {
         res.status(450).json({ message: 'Failed to toggle badge' });
     }
 };
-//# sourceMappingURL=gamificationController.js.map

@@ -42,13 +42,20 @@ export const createPost = async (
   res: Response,
 ): Promise<void> => {
   try {
+    const courseId = req.body.course || req.body.courseId;
+    if (!courseId) {
+      res.status(400).json({ message: "Course ID is required" });
+      return;
+    }
     const post = await ForumPost.create({
       ...req.body,
+      course: courseId,
       author: req.user?._id as any,
     });
     res.status(201).json(post);
-  } catch (error) {
-    res.status(400).json({ message: "Invalid post data" });
+  } catch (error: any) {
+    console.error("Failed to create forum post:", error);
+    res.status(400).json({ message: error?.message || "Invalid post data" });
   }
 };
 

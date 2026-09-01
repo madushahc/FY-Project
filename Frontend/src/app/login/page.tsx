@@ -35,7 +35,7 @@ export default function Login() {
       const selectedRole = String(role).toLowerCase();
 
       if (actualRole !== selectedRole) {
-        setError(`This account is registered as a ${response.data.role}. Please select the ${response.data.role} tab above.`);
+        setError(`Check your credentials.`);
         return;
       }
 

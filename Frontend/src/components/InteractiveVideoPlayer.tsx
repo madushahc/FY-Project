@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { CheckCircle2, AlertCircle, Award, HelpCircle, Lock, Play, Pause, RefreshCw, Clock } from "lucide-react";
 import api from "@/lib/api";
 import TermMatchingTask, { IMatchingPair } from "@/components/TermMatchingTask";
+import { resolveMediaUrl, getYouTubeEmbedUrl, getVimeoEmbedUrl } from "@/lib/mediaUrl";
 
 export interface IQuestionMarker {
   _id?: string;
@@ -69,11 +70,21 @@ export default function InteractiveVideoPlayer({
   const [showCompletionBanner, setShowCompletionBanner] = useState<boolean>(false);
   const [loadingProgress, setLoadingProgress] = useState<boolean>(true);
   const [seekingWarning, setSeekingWarning] = useState<string | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+
+  const resolvedUrl = resolveMediaUrl(videoUrl);
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(resolvedUrl);
+  const vimeoEmbedUrl = getVimeoEmbedUrl(resolvedUrl);
+
+  useEffect(() => {
+    setVideoError(null);
+  }, [resolvedUrl]);
 
   // Refs that mirror state for use inside event handlers (avoids stale closures)
   const maxWatchedTimeRef = useRef<number>(0);
   const isCompletedRef = useRef<boolean>(false);
   const isSeekingRef = useRef<boolean>(false);
+  const isRestoringProgressRef = useRef<boolean>(false);
   const seekWarningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Interactive UI modals
@@ -215,8 +226,14 @@ export default function InteractiveVideoPlayer({
       if (alreadyCompleted && onCompletionChange) {
         onCompletionChange(true, { ...data, isRestoring: true });
       }
-      if (data.maxWatchedTime && videoRef.current && videoRef.current.currentTime < data.maxWatchedTime && !alreadyCompleted) {
-        videoRef.current.currentTime = data.maxWatchedTime;
+      if (data.maxWatchedTime && videoRef.current && !alreadyCompleted) {
+        isRestoringProgressRef.current = true;
+        if (videoRef.current.currentTime < data.maxWatchedTime) {
+          videoRef.current.currentTime = data.maxWatchedTime;
+        }
+        setTimeout(() => {
+          isRestoringProgressRef.current = false;
+        }, 600);
       }
     } catch (e) {
       console.error("Failed to load lesson progress", e);
@@ -234,26 +251,26 @@ export default function InteractiveVideoPlayer({
 
   const lastContinuousTimeRef = useRef<number>(0);
 
-  // Keyboard listener to block forward arrow key shortcuts (only if allowSeeking is false)
+  // Keyboard listener to block forward arrow key & skip shortcuts (only if allowSeeking is false)
   useEffect(() => {
     if (allowSeeking) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" || e.key === "l" || e.key === "L") {
+      const skipKeys = ["ArrowRight", "l", "L", "PageDown", "MediaTrackNext"];
+      if (skipKeys.includes(e.key)) {
         if (!videoRef.current) return;
-        const target = videoRef.current.currentTime + 5;
-        if (target > maxWatchedTimeRef.current + 0.3 && !isCompletedRef.current) {
+        if (!isCompletedRef.current) {
           e.preventDefault();
           e.stopPropagation();
           videoRef.current.currentTime = maxWatchedTimeRef.current;
           if (seekWarningTimerRef.current) clearTimeout(seekWarningTimerRef.current);
           setSeekingWarning("⏩ Step forward is disabled. Please watch the lesson video continuously.");
-          seekWarningTimerRef.current = setTimeout(() => setSeekingWarning(null), 3000);
+          seekWarningTimerRef.current = setTimeout(() => setSeekingWarning(null), 2500);
         }
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [allowSeeking]);
 
   // Video time tracking and trigger check
@@ -262,20 +279,30 @@ export default function InteractiveVideoPlayer({
     const time = videoRef.current.currentTime;
     setCurrentTime(time);
 
+    if (isRestoringProgressRef.current) {
+      lastContinuousTimeRef.current = time;
+      return;
+    }
+
+    // Prevent playback rate acceleration hacks
+    if (!allowSeeking && !isCompletedRef.current && videoRef.current.playbackRate > 2.0) {
+      videoRef.current.playbackRate = 1.0;
+    }
+
     const delta = time - lastContinuousTimeRef.current;
 
-    // Detect forward seek/jump during active playback or scrubbing (only if allowSeeking is false)
-    if (!allowSeeking && time > maxWatchedTimeRef.current + 0.5 && !isCompletedRef.current) {
+    // Detect forward seek/jump past watched threshold (only if allowSeeking is false)
+    if (!allowSeeking && !isCompletedRef.current && time > maxWatchedTimeRef.current + 1.5) {
       videoRef.current.currentTime = maxWatchedTimeRef.current;
       if (seekWarningTimerRef.current) clearTimeout(seekWarningTimerRef.current);
       setSeekingWarning("⏩ Step forward is disabled. Please watch the lesson video continuously.");
-      seekWarningTimerRef.current = setTimeout(() => setSeekingWarning(null), 2000);
+      seekWarningTimerRef.current = setTimeout(() => setSeekingWarning(null), 2500);
       lastContinuousTimeRef.current = maxWatchedTimeRef.current;
       return;
     }
 
-    // Advance maxWatchedTime during playback
-    if (time > maxWatchedTimeRef.current && (allowSeeking || (!isSeekingRef.current && (delta <= 1.5 || lastContinuousTimeRef.current === 0)))) {
+    // Advance maxWatchedTime ONLY during normal real-time playback
+    if (time > maxWatchedTimeRef.current && (allowSeeking || isCompletedRef.current || (!isSeekingRef.current && (delta >= 0 && delta <= 2.0)))) {
       maxWatchedTimeRef.current = time;
       setMaxWatchedTime(time);
     }
@@ -461,56 +488,109 @@ export default function InteractiveVideoPlayer({
 
       {/* Main Video Viewport */}
       <div className="relative w-full bg-black flex items-center justify-center min-h-[380px] lg:min-h-[480px]">
-        <video
-          ref={videoRef}
-          src={videoUrl}
-          className="w-full max-h-[520px] object-contain"
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onPlay={() => {
-            setIsPlaying(true);
-            if (!playTimerRef.current) {
-              playTimerRef.current = setInterval(() => {
-                totalPlayDurationRef.current += 1;
-              }, 1000);
-            }
-          }}
-          onPause={() => {
-            setIsPlaying(false);
-            if (playTimerRef.current) {
-              clearInterval(playTimerRef.current);
-              playTimerRef.current = null;
-            }
-            if (!activeQuestionMarker) {
-              pauseCountRef.current += 1;
-            }
-          }}
-          onSeeking={() => {
-            isSeekingRef.current = true;
-            if (!videoRef.current) return;
-            const targetTime = videoRef.current.currentTime;
-            if (targetTime < lastContinuousTimeRef.current - 1.5) {
-              rewatchCountRef.current += 1;
-            }
-            if (!allowSeeking) {
-              // Strictly disable stepping / seeking forward into un-watched sections
-              if (targetTime > maxWatchedTimeRef.current + 0.3 && !isCompletedRef.current) {
-                videoRef.current.currentTime = maxWatchedTimeRef.current;
-                if (seekWarningTimerRef.current) clearTimeout(seekWarningTimerRef.current);
-                setSeekingWarning("⏩ Step forward is disabled. Please watch the lesson video continuously.");
-                seekWarningTimerRef.current = setTimeout(() => setSeekingWarning(null), 3000);
+        {youtubeEmbedUrl ? (
+          <iframe
+            src={youtubeEmbedUrl}
+            className="w-full h-[480px] border-0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            title="Lesson Video"
+          />
+        ) : vimeoEmbedUrl ? (
+          <iframe
+            src={vimeoEmbedUrl}
+            className="w-full h-[480px] border-0"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+            title="Lesson Video"
+          />
+        ) : videoError || !resolvedUrl ? (
+          <div className="flex flex-col items-center justify-center p-8 text-center bg-slate-900 border border-slate-800 rounded-xl max-w-md my-8 shadow-2xl">
+            <div className="w-14 h-14 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mb-3">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <h3 className="text-lg font-bold text-white mb-1">Unable to Load Video</h3>
+            <p className="text-xs text-slate-400 mb-4">
+              {videoError || "The requested video resource is currently empty or unavailable."}
+            </p>
+            {resolvedUrl && (
+              <a
+                href={resolvedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition mb-2"
+              >
+                Open Direct Link ↗
+              </a>
+            )}
+            <button
+              onClick={() => {
+                setVideoError(null);
+                if (videoRef.current) {
+                  videoRef.current.load();
+                }
+              }}
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition flex items-center gap-1.5"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Retry Video
+            </button>
+          </div>
+        ) : (
+          <video
+            ref={videoRef}
+            src={resolvedUrl}
+            className="w-full max-h-[520px] object-contain"
+            onTimeUpdate={handleTimeUpdate}
+            onLoadedMetadata={handleLoadedMetadata}
+            onError={() => {
+              setVideoError("The video file could not be loaded or played. Please check the network connection or file format.");
+            }}
+            onPlay={() => {
+              setIsPlaying(true);
+              if (!playTimerRef.current) {
+                playTimerRef.current = setInterval(() => {
+                  totalPlayDurationRef.current += 1;
+                }, 1000);
               }
-            }
-          }}
-          onSeeked={() => {
-            isSeekingRef.current = false;
-          }}
-          onEnded={() => {
-            setShowCompletionBanner(true);
-            sendWatchProgress(100, duration || videoRef.current?.currentTime || 0);
-          }}
-          controls
-        />
+            }}
+            onPause={() => {
+              setIsPlaying(false);
+              if (playTimerRef.current) {
+                clearInterval(playTimerRef.current);
+                playTimerRef.current = null;
+              }
+              if (!activeQuestionMarker) {
+                pauseCountRef.current += 1;
+              }
+            }}
+            onSeeking={() => {
+              isSeekingRef.current = true;
+              if (!videoRef.current || isRestoringProgressRef.current) return;
+              const targetTime = videoRef.current.currentTime;
+              if (targetTime < lastContinuousTimeRef.current - 1.5) {
+                rewatchCountRef.current += 1;
+              }
+              if (!allowSeeking && !isCompletedRef.current) {
+                // Strictly disable stepping / seeking forward into un-watched sections
+                if (targetTime > maxWatchedTimeRef.current + 1.5) {
+                  videoRef.current.currentTime = maxWatchedTimeRef.current;
+                  if (seekWarningTimerRef.current) clearTimeout(seekWarningTimerRef.current);
+                  setSeekingWarning("⏩ Step forward is disabled. Please watch the lesson video continuously.");
+                  seekWarningTimerRef.current = setTimeout(() => setSeekingWarning(null), 2500);
+                }
+              }
+            }}
+            onSeeked={() => {
+              isSeekingRef.current = false;
+            }}
+            onEnded={() => {
+              setShowCompletionBanner(true);
+              sendWatchProgress(100, duration || videoRef.current?.currentTime || 0);
+            }}
+            controls
+            controlsList="nodownload"
+          />
+        )}
 
         {/* Completion Banner Overlay */}
         {showCompletionBanner && (

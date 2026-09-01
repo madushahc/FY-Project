@@ -9,4 +9,3 @@ ensureDbConnected().then(() => {
 }).catch(err => {
     console.error("Failed to start server:", err);
 });
-//# sourceMappingURL=index.js.map

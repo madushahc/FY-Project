@@ -8,4 +8,3 @@ const EnrollmentSchema = new Schema({
     timestamps: true
 });
 export default mongoose.model('Enrollment', EnrollmentSchema);
-//# sourceMappingURL=Enrollment.js.map

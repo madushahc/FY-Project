@@ -34,4 +34,3 @@ router.put('/change-password', protect, changePassword);
 router.put('/:id', protect, authorize('Admin'), updateUser);
 router.delete('/:id', protect, authorize('Admin'), deleteUser);
 export default router;
-//# sourceMappingURL=userRoutes.js.map

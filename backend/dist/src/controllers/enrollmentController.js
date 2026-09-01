@@ -193,4 +193,3 @@ export const updateProgress = async (req, res) => {
         res.status(500).json({ message: "Server Error" });
     }
 };
-//# sourceMappingURL=enrollmentController.js.map

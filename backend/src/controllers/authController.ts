@@ -117,20 +117,6 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     const user = await User.findOne({ email: normalizedEmail });
 
     if (user && (await bcrypt.compare(password, user.passwordHash))) {
-      const requestedRole = String(role || "")
-        .trim()
-        .toLowerCase();
-      const actualRole = String(user.role || "")
-        .trim()
-        .toLowerCase();
-
-      if (requestedRole && requestedRole !== actualRole) {
-        res.status(403).json({
-          message: `Please check your credentials.`,
-        });
-        return;
-      }
-
       // Log authentication session event
       await LearningActivity.create({
         student: user._id,
@@ -182,10 +168,9 @@ export const forgotPassword = async (
 
     await user.save();
 
-    console.log(`==================================================`);
     console.log(`DIRECT PASSWORD RESET REQUEST FOR: ${user.email}`);
     console.log(`Reset Token: ${resetToken}`);
-    console.log(`==================================================`);
+
 
     res.status(200).json({
       message: "Password reset token generated successfully.",

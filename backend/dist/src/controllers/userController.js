@@ -287,4 +287,3 @@ export const getStudentStats = async (req, res) => {
         res.status(500).json({ message: "Server Error" });
     }
 };
-//# sourceMappingURL=userController.js.map
