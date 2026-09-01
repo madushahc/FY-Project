@@ -168,10 +168,9 @@ export const forgotPassword = async (
 
     await user.save();
 
-    console.log(`==================================================`);
     console.log(`DIRECT PASSWORD RESET REQUEST FOR: ${user.email}`);
     console.log(`Reset Token: ${resetToken}`);
-    console.log(`==================================================`);
+
 
     res.status(200).json({
       message: "Password reset token generated successfully.",
