@@ -440,7 +440,7 @@ export default function LecturerLearningAnalyticsPage() {
               <span>Learning Analytics & Research Intelligence</span>
             </div>
             <h1 className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
-              Learning Analytics ⭐
+              Learning Analytics
             </h1>
             <p className="text-slate-300 text-xs lg:text-sm mt-1 max-w-2xl font-medium">
               Hierarchical analysis of student engagement, learning behavior, and the pedagogical impact of gamification across courses, modules, and video lessons.
