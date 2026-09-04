@@ -1,651 +1,543 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
-import { Edit2, Trash2, X, Plus, Search, Filter, BarChart2, ArrowRight, Brain } from 'lucide-react';
+import {
+  BarChart2,
+  ArrowRight,
+  RefreshCw,
+  Clock,
+  Users,
+  BookOpen,
+  Activity,
+  Award,
+  GraduationCap,
+  FileText,
+  TrendingUp,
+  CheckCircle2,
+  Compass,
+  Layers,
+  ShieldCheck,
+  Flame,
+  ArrowUpRight
+} from 'lucide-react';
 
 export default function AdminDashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<any[]>([]);
 
-  // Search & Filter states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState('All');
+  // Real-time synchronization state
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
-  // Modal states
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<any | null>(null);
-  const [formData, setFormData] = useState({
-    role: 'Student',
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    university: 'NSBM Green University',
-    department: 'Computing',
-    phoneNumber: '',
-    jobTitle: '',
-    location: '',
-    website: '',
-    bio: ''
-  });
-  const [submitError, setSubmitError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const fetchDashboardData = async () => {
+  // Fetch real-time administrative analytics reports
+  const fetchDashboardData = useCallback(async (isManual = false) => {
+    if (isManual) setIsRefreshing(true);
     try {
-      const [analyticsRes, usersRes] = await Promise.all([
-        api.get('/analytics/admin-reports'),
-        api.get('/users')
-      ]);
-      setData(analyticsRes.data);
-      setUsers(usersRes.data);
-    } catch (err) {
-      console.error("Failed to load dashboard data", err);
-    }
-  };
-
-  useEffect(() => {
-     const init = async () => {
-       await fetchDashboardData();
-       setLoading(false);
-     };
-     init();
-  }, []);
-
-  const handleOpenAdd = () => {
-    setEditingUser(null);
-    setFormData({
-      role: 'Student',
-      firstName: '',
-      lastName: '',
-      email: '',
-      password: '',
-      university: 'NSBM Green University',
-      department: 'Computing',
-      phoneNumber: '',
-      jobTitle: '',
-      location: '',
-      website: '',
-      bio: ''
-    });
-    setSubmitError('');
-    setIsModalOpen(true);
-  };
-
-  const handleOpenEdit = (user: any) => {
-    setEditingUser(user);
-    setFormData({
-      role: user.role,
-      firstName: user.firstName || '',
-      lastName: user.lastName || '',
-      email: user.email || '',
-      password: '', // Password is not required on edit
-      university: user.university || 'NSBM Green University',
-      department: user.department || 'Computing',
-      phoneNumber: user.phoneNumber || '',
-      jobTitle: user.jobTitle || '',
-      location: user.location || '',
-      website: user.website || '',
-      bio: user.bio || ''
-    });
-    setSubmitError('');
-    setIsModalOpen(true);
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        await api.delete(`/users/${userId}`);
-        setUsers(users.filter((u: any) => u._id !== userId));
-        // Refresh analytics counters
-        const res = await api.get('/analytics/admin-reports');
-        setData(res.data);
-      } catch (err: any) {
-        alert(err.response?.data?.message || 'Failed to delete user');
-      }
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitError('');
-    setIsSubmitting(true);
-    try {
-      if (editingUser) {
-        // Edit flow
-        const { password, ...updateData } = formData;
-        // Include name
-        const fullUpdate = {
-          ...updateData,
-          name: `${formData.firstName} ${formData.lastName}`
-        };
-        const res = await api.put(`/users/${editingUser._id}`, fullUpdate);
-        setUsers(users.map((u: any) => u._id === editingUser._id ? res.data : u));
-      } else {
-        // Add flow
-        const res = await api.post('/users', formData);
-        setUsers([res.data, ...users]);
-      }
-      setIsModalOpen(false);
-      // Refresh count details on the dashboard
       const res = await api.get('/analytics/admin-reports');
       setData(res.data);
-    } catch (err: any) {
-      setSubmitError(err.response?.data?.message || 'Failed to submit. Please check inputs.');
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error("Failed to load real-time dashboard data", err);
     } finally {
-      setIsSubmitting(false);
+      if (isManual) {
+        setTimeout(() => setIsRefreshing(false), 500);
+      }
     }
-  };
+  }, []);
 
-  // Chart data height percentages and specific colors from the image
-  const chartData = data?.engagement?.dailyActiveUsers?.map((d: any, idx: number) => {
-     const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-indigo-400', 'bg-orange-400'];
-     return { h: `${d.v}%`, color: colors[idx % colors.length] };
-  }) || [];
+  // Initial fetch and 15s auto-polling when tab is visible
+  useEffect(() => {
+    let isMounted = true;
 
-  if (loading) {
-     return <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>;
-  }
+    const init = async () => {
+      await fetchDashboardData();
+      if (isMounted) setLoading(false);
+    };
+    init();
+
+    // Auto-polling interval
+    const interval = setInterval(() => {
+      if (autoRefresh && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchDashboardData();
+      }
+    }, 15000);
+
+    // Auto-refetch when user switches back to this tab
+    const handleVisibilityOrFocus = () => {
+      if (autoRefresh && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchDashboardData();
+      }
+    };
+
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+    };
+  }, [fetchDashboardData, autoRefresh]);
+
+  // Engagement telemetry chart data
+  const chartData = useMemo(() => {
+    const rawData = data?.engagement?.dailyActiveUsers || [];
+    const colors = [
+      'from-blue-600 to-indigo-500',
+      'from-emerald-500 to-teal-400',
+      'from-indigo-500 to-purple-500',
+      'from-amber-500 to-orange-400'
+    ];
+    return rawData.map((d: any, idx: number) => ({
+      h: `${Math.max(15, Math.min(100, d.v || 0))}%`,
+      val: d.v || 0,
+      gradient: colors[idx % colors.length],
+      label: d.d || `D${idx + 1}`
+    }));
+  }, [data]);
+
+
+
+  const coursePerformance = data?.coursePerformance?.courses || [];
+  const topLecturers = data?.engagement?.topLecturers || [];
+  const pointsDistribution = data?.gamification?.pointsDistribution || [];
+  const recentBadges = data?.gamification?.recentBadges || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-12">
+
+
       {/* Hero Banner */}
       <div className="bg-gradient-to-r from-red-700 via-red-600 to-red-500 rounded-3xl p-8 text-white relative overflow-hidden shadow-lg">
-        {/* Abstract background shapes */}
-        <div className="absolute right-0 top-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
-        <div className="absolute right-32 bottom-0 w-48 h-48 bg-orange-300 opacity-20 rounded-full blur-2xl translate-y-1/4"></div>
+        <div className="absolute right-0 top-0 w-72 h-72 bg-white opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
+        <div className="absolute right-40 bottom-0 w-52 h-52 bg-orange-300 opacity-20 rounded-full blur-2xl translate-y-1/4"></div>
 
         <div className="relative z-10">
-          <h1 className="text-3xl font-bold mb-2">Admin Control Panel 🛠️</h1>
-          <p className="text-red-100 text-sm mb-6">Platform-wide system overview • NSBM Green University</p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="bg-white/20 text-white text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wider backdrop-blur-sm border border-white/20 flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              LMS Operations Console
+            </span>
+          </div>
+
+          <h1 className="text-3xl font-bold mb-1">Administrative Overview</h1>
+          <p className="text-red-100 text-sm mb-6">Real-time academic telemetry & institutional performance • NSBM Green University</p>
 
           <div className="flex flex-wrap items-center justify-between gap-4 mt-6">
             <div className="flex flex-wrap gap-3">
               <div className="bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-                👥 {data?.userActivity?.metrics?.totalUsers || 0} Users
+                👥 <span className="font-bold">{data?.userActivity?.metrics?.totalUsers || 0}</span> Total Learners
               </div>
               <div className="bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-                📚 {data?.coursePerformance?.metrics?.totalCourses || 0} Courses
+                📚 <span className="font-bold">{data?.coursePerformance?.metrics?.totalCourses || 0}</span> Active Courses
               </div>
               <div className="bg-white/20 backdrop-blur-sm border border-white/30 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
-                ⚡ {data?.engagement?.metrics?.completionRate || 0}% Engagement
+                ⚡ <span className="font-bold">{data?.engagement?.metrics?.completionRate || 0}%</span> Engagement Index
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
               <Link
-                href="/admin/learning-analytics"
+                href="/admin/analytics"
                 className="bg-white/20 hover:bg-white/30 text-white border border-white/30 px-5 py-2.5 rounded-xl text-sm font-bold shadow transition duration-250 flex items-center gap-2 cursor-pointer"
               >
                 <BarChart2 className="w-4 h-4 text-yellow-300" />
                 <span>Learning Analytics ⭐</span>
               </Link>
-              <button 
-                onClick={handleOpenAdd}
-                className="bg-white hover:bg-slate-50 text-red-700 px-5 py-2.5 rounded-xl text-sm font-bold shadow transition duration-250 cursor-pointer"
+              <Link
+                href="/admin/courses"
+                className="bg-white hover:bg-slate-50 text-red-700 px-5 py-2.5 rounded-xl text-sm font-bold shadow transition duration-250 cursor-pointer flex items-center gap-1.5"
               >
-                + Quick Add User
-              </button>
+                <BookOpen className="w-4 h-4 text-red-700" />
+                <span>Course Directory</span>
+              </Link>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Metrics Cards */}
+      {/* Real-time KPI Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Total Students</p>
-          <h3 className="text-3xl font-light text-blue-500 mb-2">{data?.userActivity?.metrics?.totalUsers || 0}</h3>
-          <p className="text-emerald-500 text-xs font-medium flex items-center gap-1">
-            <span className="text-[10px]">▲</span> 22 this month
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+          <div className="flex justify-between items-start mb-2">
+            <p className="text-slate-500 text-[11px] font-bold uppercase tracking-wider">Active Students</p>
+            <span className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+              <Users className="w-4 h-4" />
+            </span>
+          </div>
+          <h3 className="text-3xl font-light text-blue-600 mb-2">
+            {data?.engagement?.metrics?.activeStudents ?? data?.userActivity?.metrics?.totalUsers ?? 0}
+          </h3>
+          <p className="text-emerald-600 text-xs font-medium flex items-center gap-1">
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Platform-wide enrolled students</span>
           </p>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Active Users</p>
-          <h3 className="text-3xl font-light text-purple-500 mb-2">{data?.userActivity?.metrics?.activeUsers || 0}</h3>
-          <p className="text-emerald-500 text-xs font-medium flex items-center gap-1">
-            <span className="text-[10px]">▲</span> 3 new
+
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+          <div className="flex justify-between items-start mb-2">
+            <p className="text-slate-500 text-[11px] font-bold uppercase tracking-wider">Course Portfolio</p>
+            <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
+              <BookOpen className="w-4 h-4" />
+            </span>
+          </div>
+          <h3 className="text-3xl font-light text-emerald-600 mb-2">
+            {data?.coursePerformance?.metrics?.totalCourses || 0}
+          </h3>
+          <p className="text-slate-500 text-xs font-medium">
+            <span className="text-amber-600 font-semibold">{data?.coursePerformance?.metrics?.draftCourses || 0}</span> unpublished in draft
           </p>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Active Courses</p>
-          <h3 className="text-3xl font-light text-emerald-500 mb-2">{data?.coursePerformance?.metrics?.totalCourses || 0}</h3>
-          <p className="text-emerald-400 text-xs font-medium">
-            {data?.coursePerformance?.metrics?.draftCourses || 0} in draft
+
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+          <div className="flex justify-between items-start mb-2">
+            <p className="text-slate-500 text-[11px] font-bold uppercase tracking-wider">Course Completions</p>
+            <span className="p-2 bg-purple-50 text-purple-600 rounded-xl">
+              <GraduationCap className="w-4 h-4" />
+            </span>
+          </div>
+          <h3 className="text-3xl font-light text-purple-600 mb-2">
+            {data?.coursePerformance?.metrics?.avgCompletion || 0}%
+          </h3>
+          <p className="text-slate-500 text-xs font-medium">
+            Avg Quiz Score: <span className="text-purple-600 font-semibold">{data?.coursePerformance?.metrics?.avgQuizScore || 0}%</span>
           </p>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-          <p className="text-slate-500 text-[10px] font-bold uppercase tracking-wider mb-2">Platform Engagement</p>
-          <h3 className="text-3xl font-light text-orange-400 mb-2">{data?.engagement?.metrics?.completionRate || 0}%</h3>
-          <p className="text-emerald-500 text-xs font-medium flex items-center gap-1">
-            <span className="text-[10px]">▲</span> +5% this month
+
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+          <div className="flex justify-between items-start mb-2">
+            <p className="text-slate-500 text-[11px] font-bold uppercase tracking-wider">Gamification Reward XP</p>
+            <span className="p-2 bg-orange-50 text-orange-600 rounded-xl">
+              <Award className="w-4 h-4" />
+            </span>
+          </div>
+          <h3 className="text-3xl font-light text-orange-500 mb-2">
+            {(data?.gamification?.metrics?.totalPoints || 0).toLocaleString()} XP
+          </h3>
+          <p className="text-emerald-600 text-xs font-medium flex items-center gap-1">
+            <Flame className="w-3.5 h-3.5 text-orange-500" />
+            <span>{data?.gamification?.metrics?.badgesAwarded || 0} badges issued</span>
           </p>
         </div>
       </div>
 
-      {/* Learning Analytics Spotlight Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 border border-indigo-500/20">
-        <div className="flex items-center gap-4">
-          <div className="bg-indigo-500/20 p-3 rounded-2xl border border-indigo-400/30">
-            <Brain className="w-8 h-8 text-indigo-400" />
-          </div>
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 uppercase tracking-wider mb-1">
-              ⭐ New Intelligence Tool
+      {/* Main Grid: Platform Telemetry & Gamification */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Engagement Telemetry Chart */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+          <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+            <div>
+              <h3 className="font-bold text-slate-800 text-lg">Daily Active Student Telemetry</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Real-time daily activity patterns and session engagement</p>
             </div>
-            <h4 className="text-lg font-extrabold text-white">Hierarchical Learning Analytics</h4>
-            <p className="text-slate-300 text-xs mt-0.5">
-              Explore in-depth engagement, video watch behavior, question accuracy, at-risk student predictions, and gamification impact across all university courses.
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                Live Stream
+              </span>
+            </div>
+          </div>
+
+          {chartData.length > 0 ? (
+            <div className="h-64 flex items-end justify-between gap-3 px-2 pb-2 pt-6">
+              {chartData.map((bar: any, idx: number) => (
+                <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded shadow-sm">
+                    {bar.val}%
+                  </div>
+                  <div
+                    className={`w-full max-w-[48px] rounded-t-lg bg-gradient-to-t ${bar.gradient} opacity-90 group-hover:opacity-100 transition-all duration-300 shadow-sm cursor-pointer`}
+                    style={{ height: bar.h }}
+                  ></div>
+                  <span className="text-[10px] font-medium text-slate-400 tracking-tight text-center truncate w-full">
+                    {bar.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-56 flex items-center justify-center text-slate-400 text-sm">
+              No engagement activity recorded yet.
+            </div>
+          )}
+
+          {/* Sub-metrics footer */}
+          <div className="grid grid-cols-3 gap-4 pt-6 mt-4 border-t border-slate-100 text-center">
+            <div>
+              <p className="text-[11px] text-slate-400 uppercase font-semibold">Total Enrollments</p>
+              <p className="text-lg font-bold text-slate-800">{data?.coursePerformance?.metrics?.totalEnrollments || 0}</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-slate-400 uppercase font-semibold">Avg Session Duration</p>
+              <p className="text-lg font-bold text-slate-800">{data?.engagement?.metrics?.avgSession || 24} min</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-slate-400 uppercase font-semibold">Platform Logins</p>
+              <p className="text-lg font-bold text-slate-800">{data?.engagement?.metrics?.totalLogins || 0}</p>
+            </div>
           </div>
         </div>
+
+        {/* Gamification & Point Streams */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-slate-800 text-lg">XP Distribution</h3>
+              <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-100">
+                Gamification
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mb-6">Learning points awarded across assignments, quizzes & interactive lessons</p>
+
+            <div className="space-y-4">
+              {pointsDistribution.map((item: any, idx: number) => (
+                <div key={idx} className="space-y-1.5">
+                  <div className="flex justify-between text-xs font-medium">
+                    <span className="text-slate-700 font-semibold">{item.n}</span>
+                    <span className="text-slate-500 font-bold">{item.p}%</span>
+                  </div>
+                  <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${item.c || 'bg-blue-500'}`}
+                      style={{ width: `${item.p}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Badges Stream */}
+            <div className="mt-8 pt-6 border-t border-slate-100">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Recent Badges Awarded</h4>
+              {recentBadges.length > 0 ? (
+                <div className="space-y-2">
+                  {recentBadges.slice(0, 4).map((badge: any, bIdx: number) => (
+                    <div key={bIdx} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                      <div className="flex items-center gap-2">
+                        <Award className={`w-4 h-4 ${badge.c || 'text-purple-600'}`} />
+                        <span className="font-medium text-slate-800">{badge.n}</span>
+                      </div>
+                      <span className="text-[11px] font-bold text-slate-500">{badge.v}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">No recent badge telemetry recorded.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-slate-100">
+            <Link
+              href="/admin/analytics"
+              className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center justify-between group cursor-pointer"
+            >
+              <span>Explore deep engagement matrix</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Course Performance Telemetry & Faculty Leadership */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Course Performance Matrix */}
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+            <div>
+              <h3 className="font-bold text-slate-800 text-lg">Academic Course Performance</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Real-time enrolled cohort progress & assessment scores</p>
+            </div>
+            <Link
+              href="/admin/courses"
+              className="text-xs font-semibold text-red-600 hover:text-red-700 inline-flex items-center gap-1"
+            >
+              <span>Manage all courses</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-600">
+              <thead>
+                <tr className="border-b border-slate-100 text-slate-400 text-[11px] uppercase tracking-wider font-semibold">
+                  <th className="pb-3 px-3">Course</th>
+                  <th className="pb-3 px-3">Department</th>
+                  <th className="pb-3 px-3">Instructor</th>
+                  <th className="pb-3 px-3">Enrolled</th>
+                  <th className="pb-3 px-3">Avg Progress</th>
+                  <th className="pb-3 px-3">Avg Quiz</th>
+                  <th className="pb-3 px-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs">
+                {coursePerformance.slice(0, 5).map((course: any, idx: number) => (
+                  <tr key={idx} className="hover:bg-slate-50/75 transition-colors">
+                    <td className="py-3 px-3 font-semibold text-slate-800 max-w-[180px] truncate">
+                      {course.course}
+                    </td>
+                    <td className="py-3 px-3 text-slate-500 font-medium">
+                      {course.dept || 'General'}
+                    </td>
+                    <td className="py-3 px-3 text-slate-600">
+                      {course.lecturer || 'Unassigned'}
+                    </td>
+                    <td className="py-3 px-3 font-semibold text-slate-700">
+                      {course.enrolled}
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${course.color || 'bg-emerald-500'}`}
+                            style={{ width: `${course.completion || 0}%` }}
+                          ></div>
+                        </div>
+                        <span className="font-semibold text-slate-700 text-[11px]">{course.completion}%</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 font-semibold text-slate-700">
+                      {course.avgQuiz}
+                    </td>
+                    <td className="py-3 px-3">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${course.status === 'Published'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          }`}
+                      >
+                        {course.status || 'Active'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {coursePerformance.length === 0 && (
+              <div className="text-center py-10 text-slate-400 text-xs">
+                No active courses available for telemetry reporting.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Top Performing Faculty */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-slate-800 text-lg">Faculty Leadership</h3>
+              <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-100">
+                Lecturers
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mb-6">Top performing academic instructors by engagement & course completions</p>
+
+            <div className="space-y-3">
+              {topLecturers.slice(0, 5).map((lec: any, lIdx: number) => (
+                <div key={lIdx} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white font-bold text-xs uppercase shadow-sm">
+                      {(lec.l || 'L').charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-xs text-slate-800">{lec.l}</p>
+                      <p className="text-[11px] text-slate-400">{lec.c} Active Courses</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-xs font-bold text-emerald-600">{lec.e}</span>
+                    <p className="text-[10px] text-slate-400">{lec.comp} completions</p>
+                  </div>
+                </div>
+              ))}
+
+              {topLecturers.length === 0 && (
+                <div className="text-center py-8 text-slate-400 text-xs">
+                  No faculty records found.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-slate-100">
+            <Link
+              href="/admin/reports"
+              className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center justify-between group cursor-pointer"
+            >
+              <span>View institutional research data</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Administrative Nav Hub */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
         <Link
-          href="/admin/learning-analytics"
-          className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg shrink-0 cursor-pointer w-fit"
+          href="/admin/users"
+          className="p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-red-100 transition-all group cursor-pointer"
         >
-          <span>Open Learning Analytics</span>
-          <ArrowRight className="w-4 h-4" />
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+            <Users className="w-5 h-5" />
+          </div>
+          <h4 className="font-bold text-sm text-slate-800 group-hover:text-red-600 transition-colors">User Management</h4>
+          <p className="text-xs text-slate-500 mt-1">Manage student, lecturer, and administrative roles & security.</p>
+          <div className="mt-3 flex items-center text-xs font-semibold text-blue-600 gap-1">
+            <span>Open directory</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/courses"
+          className="p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-red-100 transition-all group cursor-pointer"
+        >
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <h4 className="font-bold text-sm text-slate-800 group-hover:text-red-600 transition-colors">Course Governance</h4>
+          <p className="text-xs text-slate-500 mt-1">Audit curriculums, lesson modules, drafts, and enrollments.</p>
+          <div className="mt-3 flex items-center text-xs font-semibold text-emerald-600 gap-1">
+            <span>Open catalog</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/analytics"
+          className="p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-red-100 transition-all group cursor-pointer"
+        >
+          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+            <BarChart2 className="w-5 h-5" />
+          </div>
+          <h4 className="font-bold text-sm text-slate-800 group-hover:text-red-600 transition-colors">Learning Analytics ⭐</h4>
+          <p className="text-xs text-slate-500 mt-1">Deep interactive video, quiz attempt, and student drop-off metrics.</p>
+          <div className="mt-3 flex items-center text-xs font-semibold text-purple-600 gap-1">
+            <span>Launch engine</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/reports"
+          className="p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-red-100 transition-all group cursor-pointer"
+        >
+          <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+            <FileText className="w-5 h-5" />
+          </div>
+          <h4 className="font-bold text-sm text-slate-800 group-hover:text-red-600 transition-colors">System Reports</h4>
+          <p className="text-xs text-slate-500 mt-1">Export raw academic research data and comprehensive institutional audit logs.</p>
+          <div className="mt-3 flex items-center text-xs font-semibold text-orange-600 gap-1">
+            <span>Export data</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </div>
         </Link>
       </div>
-
-      {/* Main Chart Area */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <div className="flex justify-between items-center mb-8">
-          <h3 className="font-semibold text-slate-800">Platform-Wide Engagement</h3>
-          <button className="bg-blue-50 text-blue-600 px-4 py-1.5 rounded-full text-xs font-medium">
-            Last 30 days
-          </button>
-        </div>
-
-        <div className="h-64 flex items-end justify-between gap-2 px-2 pb-2">
-          {chartData.map((bar: any, idx: number) => (
-            <div
-              key={idx}
-              className={`w-full max-w-[40px] rounded-t-md ${bar.color} opacity-90 hover:opacity-100 transition-opacity cursor-pointer`}
-              style={{ height: bar.h }}
-            ></div>
-          ))}
-        </div>
-      </div>
-
-      {/* User Directory / Management Table */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h3 className="font-semibold text-slate-800 text-lg">User Directory</h3>
-            <p className="text-xs text-slate-500 font-medium">Search and manage student, lecturer, and admin accounts</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Search Input */}
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input 
-                type="text"
-                placeholder="Search users..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 border border-slate-205 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50 w-full sm:w-60"
-              />
-            </div>
-
-            {/* Filter Dropdown */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-3.5 h-3.5 text-slate-500" />
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="px-3 py-2 border border-slate-200 rounded-lg text-xs text-slate-850 focus:outline-none focus:border-blue-500 bg-slate-50"
-              >
-                <option value="All">All Roles</option>
-                <option value="Student">Students</option>
-                <option value="Lecturer">Lecturers</option>
-                <option value="Admin">Admins</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Users Table */}
-        <div className="border border-slate-100 rounded-xl overflow-hidden overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[700px]">
-            <thead>
-              <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50">
-                <th className="py-4 pl-6 pr-4">User</th>
-                <th className="py-4 px-4 w-32">Role</th>
-                <th className="py-4 px-4">Department</th>
-                <th className="py-4 px-4">Contact / Website</th>
-                <th className="py-4 pr-6 pl-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {users
-                .filter((u: any) => {
-                  const matchQuery = 
-                    u.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                    u.email?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                    u.department?.toLowerCase().includes(searchQuery.toLowerCase());
-                  const matchRole = roleFilter === 'All' || u.role === roleFilter;
-                  return matchQuery && matchRole;
-                })
-                .map((u: any) => {
-                  const initials = u.name?.charAt(0).toUpperCase() || 'U';
-                  const roleColors = 
-                    u.role === 'Student' ? 'bg-blue-55 text-blue-600' :
-                    u.role === 'Lecturer' ? 'bg-purple-55 text-purple-600' :
-                    'bg-red-55 text-red-600';
-                  return (
-                    <tr key={u._id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-3.5 pl-6 pr-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                            u.role === 'Student' ? 'bg-blue-600' : 
-                            u.role === 'Lecturer' ? 'bg-purple-600' : 
-                            'bg-red-600'
-                          }`}>
-                            {initials}
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-slate-800">{u.name}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">{u.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-xs font-medium">
-                        <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${roleColors}`}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-xs text-slate-600 font-medium">
-                        {u.department || 'N/A'}
-                      </td>
-                      <td className="py-3.5 px-4 text-xs text-slate-500 font-medium">
-                        {u.role === 'Lecturer' && u.website ? (
-                          <a href={u.website} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                            {u.website.replace(/^https?:\/\//, '')}
-                          </a>
-                        ) : (
-                          u.phoneNumber || '—'
-                        )}
-                      </td>
-                      <td className="py-3.5 pr-6 pl-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button 
-                            onClick={() => handleOpenEdit(u)}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition"
-                            title="Edit User"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteUser(u._id)}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 rounded-lg transition"
-                            title="Delete User"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              {users.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-xs text-slate-400 font-medium">No users loaded yet.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Quick Add / Edit User Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-100 max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200 relative max-h-[90vh] overflow-y-auto text-left">
-            <button 
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition bg-transparent border-none cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <h3 className="text-lg font-bold text-slate-800 mb-4">
-              {editingUser ? 'Edit User Profile' : 'Quick Add User'}
-            </h3>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {submitError && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-lg text-center">
-                  {submitError}
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">Role</label>
-                  <select
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50"
-                  >
-                    <option value="Student">Student</option>
-                    <option value="Lecturer">Lecturer</option>
-                    <option value="Admin">Admin</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">Department</label>
-                  <input 
-                    type="text"
-                    required
-                    value={formData.department}
-                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-850 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">First Name</label>
-                  <input 
-                    type="text"
-                    required
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-850 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">Last Name</label>
-                  <input 
-                    type="text"
-                    required
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-850 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-600">Email Address</label>
-                <input 
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-850 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50"
-                />
-              </div>
-
-              {!editingUser && (
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-600">Password</label>
-                  <input 
-                    type="password"
-                    required
-                    minLength={6}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder="Min 6 characters"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-850 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-600">University</label>
-                <input 
-                  type="text"
-                  required
-                  value={formData.university}
-                  onChange={(e) => setFormData({ ...formData, university: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-850 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50"
-                />
-              </div>
-
-              {/* Dynamic inputs based on Role */}
-              {formData.role === 'Student' && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-600">Phone Number</label>
-                      <input 
-                        type="text"
-                        value={formData.phoneNumber}
-                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-600">Location</label>
-                      <input 
-                        type="text"
-                        value={formData.location}
-                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-600">Bio</label>
-                    <textarea 
-                      value={formData.bio}
-                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50"
-                    />
-                  </div>
-                </>
-              )}
-
-              {formData.role === 'Lecturer' && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-600">Job Title</label>
-                      <input 
-                        type="text"
-                        placeholder="e.g. Senior Lecturer, Professor"
-                        value={formData.jobTitle}
-                        onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-600">Website</label>
-                      <input 
-                        type="url"
-                        placeholder="https://..."
-                        value={formData.website}
-                        onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-600">Phone Number</label>
-                      <input 
-                        type="text"
-                        value={formData.phoneNumber}
-                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-600">Location</label>
-                      <input 
-                        type="text"
-                        value={formData.location}
-                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-600">Bio</label>
-                    <textarea 
-                      value={formData.bio}
-                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50"
-                    />
-                  </div>
-                </>
-              )}
-
-              {formData.role === 'Admin' && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-600">Job Title</label>
-                      <input 
-                        type="text"
-                        placeholder="e.g. IT Administrator, System Admin"
-                        value={formData.jobTitle}
-                        onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-600">Phone Number</label>
-                      <input 
-                        type="text"
-                        value={formData.phoneNumber}
-                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-600">Bio</label>
-                    <textarea 
-                      value={formData.bio}
-                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-blue-500 bg-slate-50"
-                    />
-                  </div>
-                </>
-              )}
-
-              <button 
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-2.5 bg-blue-600 text-white font-bold rounded-lg text-sm hover:bg-blue-700 transition disabled:opacity-50 mt-4 cursor-pointer"
-              >
-                {isSubmitting ? 'Saving...' : editingUser ? 'Save Profile' : 'Create User'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

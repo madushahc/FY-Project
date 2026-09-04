@@ -57,7 +57,7 @@ export default function Sidebar({ role = "STUDENT" }: { role?: string }) {
         icon: PenTool,
       },
       ...(isLecturer
-        ? [{ name: "Learning Analytics ⭐", href: "/lecturer/learning-analytics", icon: BarChart2 }]
+        ? [{ name: "Learning Analytics ", href: "/lecturer/learning-analytics", icon: BarChart2 }]
         : []),
       ...(!isLecturer
         ? [{ name: "Forum", href: "/student/forum", icon: MessageSquare }]

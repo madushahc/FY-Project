@@ -11,12 +11,17 @@ interface Course {
   department?: string;
   description: string;
   category?: string;
+  academicYear?: string;
+  difficultyLevel?: string;
+  creditHours?: number;
+  averageRating?: number;
   thumbnailUrl?: string;
   status: string;
-  instructor?: { name: string; email: string };
+  instructor?: { _id?: string; name: string; email: string };
   modules?: any[];
   enrollmentCount?: number;
   enrollmentType?: string;
+  createdAt?: string;
 }
 
 interface Enrollment {
